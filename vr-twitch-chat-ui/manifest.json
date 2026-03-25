@@ -1,0 +1,20 @@
+{
+  "dependencies": [],
+  "content_type": "INGAMEPANELS",
+  "title": "Live Chat",
+  "manufacturer": "SkyDeck",
+  "creator": "SkyDeck",
+  "package_version": "2.0.0",
+  "minimum_game_version": "1.6.34",
+  "minimum_compatibility_version": "6.34.0.169",
+  "export_type": "Community",
+  "builder": "Microsoft Flight Simulator 2024",
+  "package_order_hint": "PANEL_PATCH",
+  "release_notes": {
+    "neutral": {
+      "LastUpdate": "",
+      "OlderHistory": ""
+    }
+  },
+  "total_package_size": "18260"
+}

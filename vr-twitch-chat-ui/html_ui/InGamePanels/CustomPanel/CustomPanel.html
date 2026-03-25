@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/SCSS/common.css" />
+    <link rel="stylesheet" href="CustomPanel.css" />
+
+    <script type="text/javascript" src="/JS/coherent.js"></script>
+    <script type="text/javascript" src="/JS/common.js"></script>
+    <script type="text/javascript" src="/JS/dataStorage.js"></script>
+    <script type="text/javascript" src="/JS/buttons.js"></script>
+    <script type="text/javascript" src="/JS/Services/ToolBarPanels.js"></script>
+    <script type="text/javascript" src="/Pages/VCockpit/Instruments/Shared/BaseInstrument.js"></script>
+
+    <link rel="import" href="/templates/ingameUi/ingameUi.html" />
+    <link rel="import" href="/templates/ingameUiHeader/ingameUiHeader.html" />
+
+    <script type="text/javascript" src="/JS/debug.js"></script>
+    <script type="text/javascript" src="CustomPanel.js"></script>
+</head>
+
+<body class="border-box">
+    <ingamepanel-skydecktwitch>
+        <ingame-ui id="SkyDeckTwitch" panel-id="PANEL_SKYDECK_TWITCH" title="Live Twitch Chat" class="ingameUiFrame panelInvisible" content-fit="true" min-width="300" min-height="400">
+            <!-- Setup screen -->
+            <div id="SetupScreen">
+                <div id="SetupTitle">TWITCH CHAT</div>
+                <div id="SetupForm">
+                    <label for="ChannelInput">Channel Name</label>
+                    <input type="text" id="ChannelInput" placeholder="your_channel_name" />
+                    <button id="ConnectBtn">CONNECT</button>
+                </div>
+                <div id="ConfigHint">Edit config.json to set channel</div>
+            </div>
+            <!-- Chat display -->
+            <div id="ChatWrap">
+                <div id="ChatHeader">
+                    <span id="ChatChannelName"></span>
+                    <div id="ChatControls">
+                        <button id="FontDownBtn" class="ctrl-btn">A-</button>
+                        <span id="FontSizeLabel">28</span>
+                        <button id="FontUpBtn" class="ctrl-btn">A+</button>
+                        <button id="DisconnectBtn" class="ctrl-btn">X</button>
+                    </div>
+                </div>
+                <div id="ChatMessages"></div>
+                <div id="ChatStatus">Connecting...</div>
+            </div>
+        </ingame-ui>
+    </ingamepanel-skydecktwitch>
+</body>
+</html>

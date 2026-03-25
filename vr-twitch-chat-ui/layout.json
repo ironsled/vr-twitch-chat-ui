@@ -1,0 +1,49 @@
+{
+  "content": [
+    {
+      "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.css",
+      "size": 4129,
+      "date": 132441482909180874
+    },
+    {
+      "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.html",
+      "size": 2385,
+      "date": 132440507097241168
+    },
+    {
+      "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.js",
+      "size": 10638,
+      "date": 132442481411972180
+    },
+    {
+      "path": "html_ui/InGamePanels/CustomPanel/config.json",
+      "size": 58,
+      "date": 132441482909180874
+    },
+    {
+      "path": "html_ui/InGamePanels/CustomPanel/icon.svg",
+      "size": 190,
+      "date": 132441482909180874
+    },
+    {
+      "path": "InGamePanels/CustomPanel/panel.cfg",
+      "size": 218,
+      "date": 132441482909180874
+    },
+    {
+      "path": "InGamePanels/CustomPanel/maximus-ingamepanels-custom.spb",
+      "size": 698,
+      "date": 132453435271410222
+    },
+    {
+      "path": "html_ui/Textures/Menu/toolbar/ICON_TOOLBAR_MAXIMUS_CUSTOM_PANEL.svg",
+      "size": 190,
+      "date": 132401952992678246
+    },
+    {
+      "path": "html_ui/icons/toolbar/ICON_TOOLBAR_MAXIMUS_CUSTOM_PANEL.svg",
+      "size": 307,
+      "date": 132401952992678246
+    }
+  ]
+}
