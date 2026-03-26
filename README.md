@@ -40,7 +40,7 @@ Edit `vr-twitch-chat-ui/html_ui/InGamePanels/CustomPanel/config.json`:
     "channel_font_size": 16,
     "ui_font_size": 12,
     "emote_size": 22,
-    "vr_scale": 2.2
+    "vr_scale": 2.2,
     "vr_font_size": 50,
     "vr_channel_font_size": 50,
     "vr_ui_font_size": 50,
