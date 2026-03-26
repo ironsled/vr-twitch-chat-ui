@@ -2,7 +2,7 @@
   "content": [
     {
       "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.css",
-      "size": 5290,
+      "size": 5564,
       "date": 132441482909180874
     },
     {
@@ -12,7 +12,7 @@
     },
     {
       "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.js",
-      "size": 25358,
+      "size": 28263,
       "date": 132442481411972180
     },
     {

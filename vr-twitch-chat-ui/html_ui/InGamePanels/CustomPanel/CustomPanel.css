@@ -295,6 +295,18 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     margin: 0 2px;
 }
 
+/* Emote text label (shown while image loads, or if image fails) */
+.emote-label {
+    display: inline-block;
+    background: #2a2a3e;
+    color: #bf94ff;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    margin: 0 2px;
+    vertical-align: middle;
+}
+
 #ChatStatus {
     padding: 3px 8px;
     font-size: 11px;

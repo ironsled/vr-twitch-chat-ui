@@ -568,7 +568,12 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.addChatMessage(displayName, color, message, emotesTag);
     }
 
-    // ---- Emote Fetching & Caching ----
+    // ---- Emote Loading ----
+    //
+    // Strategy: Always show emote name as a styled text label immediately.
+    // Attempt to load the emote image via multiple methods (Image object,
+    // XHR, fetch). If any method succeeds, swap the text label for the image.
+    // This ensures emotes are ALWAYS visible regardless of Coherent restrictions.
 
     getEmoteUrl(emoteId) {
         return 'https://static-cdn.jtvnws.net/emoticons/v2/' + emoteId + '/default/dark/2.0';
@@ -580,44 +585,117 @@ class IngamePanelCustomPanel extends TemplateElement {
 
         var self = this;
         this.emotePending[emoteId] = true;
-
         var url = this.getEmoteUrl(emoteId);
-        fetch(url)
-            .then(function (response) {
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                return response.blob();
-            })
-            .then(function (blob) {
-                var reader = new FileReader();
-                reader.onloadend = function () {
-                    self.emoteCache[emoteId] = reader.result; // data URI
-                    delete self.emotePending[emoteId];
-                    // Update any placeholder images waiting for this emote
-                    self.updateEmotePlaceholders(emoteId, reader.result);
-                };
-                reader.readAsDataURL(blob);
-            })
-            .catch(function () {
-                // Mark as failed so we don't retry endlessly
-                self.emoteCache[emoteId] = 'failed';
+
+        // Method 1: Image object — works if Coherent allows external image loading
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+            if (self.emoteCache[emoteId]) return; // another method already succeeded
+            // Draw to canvas to get data URI
+            try {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                var dataUri = canvas.toDataURL('image/png');
+                self.emoteCache[emoteId] = dataUri;
                 delete self.emotePending[emoteId];
-            });
+                self.upgradeEmotePlaceholders(emoteId, dataUri);
+            } catch (e) {
+                // Canvas tainted or unavailable, try setting src directly
+                self.emoteCache[emoteId] = url;
+                delete self.emotePending[emoteId];
+                self.upgradeEmotePlaceholders(emoteId, url);
+            }
+        };
+        img.onerror = function () {
+            // Method 1 failed, try Method 2
+            self.fetchEmoteXHR(emoteId, url);
+        };
+        img.src = url;
     }
 
-    updateEmotePlaceholders(emoteId, dataUri) {
-        // Find all placeholder images for this emote and swap in the data URI
+    fetchEmoteXHR(emoteId, url) {
+        if (this.emoteCache[emoteId]) return;
+
+        var self = this;
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = function () {
+                if (self.emoteCache[emoteId]) return;
+                if (xhr.status === 200) {
+                    var bytes = new Uint8Array(xhr.response);
+                    var binary = '';
+                    for (var i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    var dataUri = 'data:image/png;base64,' + btoa(binary);
+                    self.emoteCache[emoteId] = dataUri;
+                    delete self.emotePending[emoteId];
+                    self.upgradeEmotePlaceholders(emoteId, dataUri);
+                } else {
+                    self.fetchEmoteFetch(emoteId, url);
+                }
+            };
+            xhr.onerror = function () {
+                self.fetchEmoteFetch(emoteId, url);
+            };
+            xhr.send();
+        } catch (e) {
+            this.fetchEmoteFetch(emoteId, url);
+        }
+    }
+
+    fetchEmoteFetch(emoteId, url) {
+        if (this.emoteCache[emoteId]) return;
+
+        var self = this;
+        try {
+            fetch(url)
+                .then(function (r) { return r.blob(); })
+                .then(function (blob) {
+                    if (self.emoteCache[emoteId]) return;
+                    var reader = new FileReader();
+                    reader.onloadend = function () {
+                        self.emoteCache[emoteId] = reader.result;
+                        delete self.emotePending[emoteId];
+                        self.upgradeEmotePlaceholders(emoteId, reader.result);
+                    };
+                    reader.readAsDataURL(blob);
+                })
+                .catch(function () {
+                    self.emoteCache[emoteId] = 'failed';
+                    delete self.emotePending[emoteId];
+                });
+        } catch (e) {
+            self.emoteCache[emoteId] = 'failed';
+            delete self.emotePending[emoteId];
+        }
+    }
+
+    upgradeEmotePlaceholders(emoteId, src) {
+        // Replace text label placeholders with actual images
         if (!this.chatMessages) return;
-        var placeholders = this.chatMessages.querySelectorAll('img[data-emote-id="' + emoteId + '"]');
-        for (var i = 0; i < placeholders.length; i++) {
-            placeholders[i].src = dataUri;
-            placeholders[i].style.display = '';
+        var labels = this.chatMessages.querySelectorAll('.emote-label[data-emote-id="' + emoteId + '"]');
+        for (var i = 0; i < labels.length; i++) {
+            var label = labels[i];
+            var img = document.createElement('img');
+            img.className = 'twitch-emote';
+            img.src = src;
+            img.alt = label.textContent;
+            img.title = label.textContent;
+            img.style.height = this.emoteSize + 'px';
+            label.parentNode.replaceChild(img, label);
         }
     }
 
     // ---- Emote Parsing ----
 
     parseEmotes(emotesTag) {
-        // emotesTag format: "emoteId:start-end,start-end/emoteId:start-end"
         if (!emotesTag) return [];
 
         var emotes = [];
@@ -655,9 +733,8 @@ class IngamePanelCustomPanel extends TemplateElement {
             this.fetchEmote(emotes[i].id);
         }
 
-        // Build DOM nodes: text spans + img elements
+        // Build DOM nodes: text spans + emote labels/images
         var chars = Array.from(messageText);
-        // Leading colon+space
         textEl.appendChild(document.createTextNode(': '));
 
         var pos = 0;
@@ -667,33 +744,30 @@ class IngamePanelCustomPanel extends TemplateElement {
             if (e.start > pos) {
                 textEl.appendChild(document.createTextNode(chars.slice(pos, e.start).join('')));
             }
-            // Emote image
+
             var emoteName = chars.slice(e.start, e.end + 1).join('');
-            var img = document.createElement('img');
-            img.className = 'twitch-emote';
-            img.alt = emoteName;
-            img.title = emoteName;
-            img.setAttribute('data-emote-id', e.id);
-            img.style.height = this.emoteSize + 'px';
 
             if (this.emoteCache[e.id] && this.emoteCache[e.id] !== 'failed') {
-                // Already cached — use data URI directly
+                // Already cached — show image directly
+                var img = document.createElement('img');
+                img.className = 'twitch-emote';
                 img.src = this.emoteCache[e.id];
-            } else if (this.emoteCache[e.id] === 'failed') {
-                // Failed to load — show emote name as text instead
-                textEl.appendChild(document.createTextNode(emoteName));
-                pos = e.end + 1;
-                continue;
+                img.alt = emoteName;
+                img.title = emoteName;
+                img.style.height = this.emoteSize + 'px';
+                textEl.appendChild(img);
             } else {
-                // Still loading — hide until data URI arrives
-                img.src = '';
-                img.style.display = 'none';
+                // Show styled text label — will be upgraded to image if loading succeeds
+                var label = document.createElement('span');
+                label.className = 'emote-label';
+                label.setAttribute('data-emote-id', e.id);
+                label.textContent = emoteName;
+                textEl.appendChild(label);
             }
 
-            textEl.appendChild(img);
             pos = e.end + 1;
         }
-        // Remaining text after last emote
+        // Remaining text
         if (pos < chars.length) {
             textEl.appendChild(document.createTextNode(chars.slice(pos).join('')));
         }
