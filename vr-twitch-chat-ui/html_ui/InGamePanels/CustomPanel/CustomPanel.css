@@ -176,6 +176,24 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     color: #fff;
 }
 
+/* VR/Desktop mode indicator */
+.vr-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #888;
+    background: #2a2a2e;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 2px 5px;
+    letter-spacing: 1px;
+}
+
+.vr-label.vr-active {
+    color: #4fc3f7;
+    border-color: #4fc3f7;
+    background: #1a2a3a;
+}
+
 #SettingsBtn {
     border-color: #555;
     color: #aaa;

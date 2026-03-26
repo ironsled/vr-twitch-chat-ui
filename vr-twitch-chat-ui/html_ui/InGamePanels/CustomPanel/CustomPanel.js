@@ -9,15 +9,26 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.maxMessages = 100;
         this.configLoaded = false;
 
-        // Font size defaults
-        this.chatFontSize = 28;
+        // Font size defaults (desktop)
+        this.desktopFonts = { chat: 22, channel: 16, ui: 12, emote: 22 };
+        // Font size defaults (VR) — larger for headset readability
+        this.vrFonts = { chat: 40, channel: 28, ui: 20, emote: 40 };
+        // VR scale multiplier applied to desktop defaults to generate VR defaults
+        this.vrScale = 1.8;
+
+        // Active font sizes (set from whichever profile is active)
+        this.chatFontSize = 22;
         this.channelFontSize = 16;
         this.uiFontSize = 12;
-        this.emoteSize = 28;
+        this.emoteSize = 22;
 
         this.minFontSize = 8;
-        this.maxFontSize = 72;
+        this.maxFontSize = 100;
         this.fontStep = 2;
+
+        // VR detection
+        this.isVR = false;
+        this.vrCheckInterval = null;
 
         // Emote cache: maps emote ID -> data URI (or 'loading'/'failed')
         this.emoteCache = {};
@@ -66,11 +77,14 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.chatFontValue = document.getElementById("ChatFontValue");
         this.uiFontValue = document.getElementById("UIFontValue");
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
+        this.vrModeLabel = document.getElementById("VRModeLabel");
 
         // Clear any stale position data from previous version that interfered with MSFS dragging
         this.setStored('PanelPos', '');
 
-        // Restore saved font settings from persistent storage (overrides config defaults)
+        // Detect initial VR state, migrate old settings, restore matching font profile
+        this.detectVRMode();
+        this.migrateOldFontSettings();
         this.restoreFontSettings();
 
         // Load config file
@@ -143,6 +157,11 @@ class IngamePanelCustomPanel extends TemplateElement {
             }
         }, 5000);
 
+        // Periodic VR mode check (every 3 seconds)
+        this.vrCheckInterval = setInterval(function () {
+            self.checkVRModeChange();
+        }, 3000);
+
         // Apply initial font sizes
         this.applyAllFontSizes();
     }
@@ -161,6 +180,47 @@ class IngamePanelCustomPanel extends TemplateElement {
         }
         if (this.settingsBtn) {
             this.settingsBtn.classList.toggle('active', this.settingsOpen);
+        }
+    }
+
+    // ---- VR Mode Detection ----
+
+    detectVRMode() {
+        // Try SimVar first (MSFS Coherent), fall back to false
+        try {
+            if (typeof SimVar !== 'undefined' && SimVar.GetSimVarValue) {
+                var vrVal = SimVar.GetSimVarValue('IS VR ENABLED', 'Boolean');
+                this.isVR = !!vrVal;
+            }
+        } catch (e) {
+            this.isVR = false;
+        }
+        this.updateVRLabel();
+    }
+
+    checkVRModeChange() {
+        var wasVR = this.isVR;
+        this.detectVRMode();
+
+        if (this.isVR !== wasVR) {
+            // Mode changed — save current fonts to the OLD mode's profile, load new mode's profile
+            this.saveFontSettingsForMode(wasVR);
+            this.loadFontSettingsForMode(this.isVR);
+            this.applyAllFontSizes();
+
+            this.setStatus(this.isVR ? 'Switched to VR mode' : 'Switched to Desktop mode');
+            var self = this;
+            setTimeout(function () {
+                if (self.chatStatus) self.chatStatus.style.display = 'none';
+            }, 2000);
+        }
+    }
+
+    updateVRLabel() {
+        if (this.vrModeLabel) {
+            this.vrModeLabel.textContent = this.isVR ? 'VR' : 'DT';
+            this.vrModeLabel.title = this.isVR ? 'VR Mode' : 'Desktop Mode';
+            this.vrModeLabel.className = this.isVR ? 'vr-label vr-active' : 'vr-label';
         }
     }
 
@@ -191,28 +251,66 @@ class IngamePanelCustomPanel extends TemplateElement {
         return '';
     }
 
-    // ---- Font Settings Persistence ----
+    // ---- Font Settings Persistence (mode-aware) ----
+
+    getFontStorageKey(vrMode) {
+        return vrMode ? 'FontSettings_VR' : 'FontSettings_Desktop';
+    }
 
     saveFontSettings() {
+        // Save to the current mode's profile
+        this.saveFontSettingsForMode(this.isVR);
+    }
+
+    saveFontSettingsForMode(vrMode) {
         var settings = JSON.stringify({
             chatFontSize: this.chatFontSize,
             channelFontSize: this.channelFontSize,
             uiFontSize: this.uiFontSize,
             emoteSize: this.emoteSize
         });
-        this.setStored('FontSettings', settings);
+        this.setStored(this.getFontStorageKey(vrMode), settings);
     }
 
     restoreFontSettings() {
-        var settingsStr = this.getStored('FontSettings');
-        if (!settingsStr) return;
-        try {
-            var s = JSON.parse(settingsStr);
-            if (s.chatFontSize) this.chatFontSize = this.clampFont(s.chatFontSize);
-            if (s.channelFontSize) this.channelFontSize = this.clampFont(s.channelFontSize);
-            if (s.uiFontSize) this.uiFontSize = this.clampFont(s.uiFontSize);
-            if (s.emoteSize) this.emoteSize = this.clampFont(s.emoteSize);
-        } catch (e) {}
+        this.loadFontSettingsForMode(this.isVR);
+    }
+
+    loadFontSettingsForMode(vrMode) {
+        var settingsStr = this.getStored(this.getFontStorageKey(vrMode));
+        if (settingsStr) {
+            try {
+                var s = JSON.parse(settingsStr);
+                if (s.chatFontSize) this.chatFontSize = this.clampFont(s.chatFontSize);
+                if (s.channelFontSize) this.channelFontSize = this.clampFont(s.channelFontSize);
+                if (s.uiFontSize) this.uiFontSize = this.clampFont(s.uiFontSize);
+                if (s.emoteSize) this.emoteSize = this.clampFont(s.emoteSize);
+                return;
+            } catch (e) {}
+        }
+
+        // No saved profile for this mode — use defaults
+        if (vrMode) {
+            this.chatFontSize = this.vrFonts.chat;
+            this.channelFontSize = this.vrFonts.channel;
+            this.uiFontSize = this.vrFonts.ui;
+            this.emoteSize = this.vrFonts.emote;
+        } else {
+            this.chatFontSize = this.desktopFonts.chat;
+            this.channelFontSize = this.desktopFonts.channel;
+            this.uiFontSize = this.desktopFonts.ui;
+            this.emoteSize = this.desktopFonts.emote;
+        }
+    }
+
+    // Migrate old single-profile settings to desktop profile (one-time)
+    migrateOldFontSettings() {
+        var oldStr = this.getStored('FontSettings');
+        if (oldStr && !this.getStored('FontSettings_Desktop')) {
+            this.setStored('FontSettings_Desktop', oldStr);
+        }
+        // Clear old key
+        if (oldStr) this.setStored('FontSettings', '');
     }
 
     // ---- Font Size ----
@@ -284,19 +382,34 @@ class IngamePanelCustomPanel extends TemplateElement {
             .then(function (response) { return response.json(); })
             .then(function (config) {
                 self.configLoaded = true;
-                // Font sizes from config
+
+                // VR scale multiplier from config
+                if (config.vr_scale && typeof config.vr_scale === 'number') {
+                    self.vrScale = config.vr_scale;
+                }
+
+                // Desktop font defaults from config
                 if (config.font_size && typeof config.font_size === 'number') {
-                    self.chatFontSize = self.clampFont(config.font_size);
+                    self.desktopFonts.chat = config.font_size;
                 }
                 if (config.channel_font_size && typeof config.channel_font_size === 'number') {
-                    self.channelFontSize = self.clampFont(config.channel_font_size);
+                    self.desktopFonts.channel = config.channel_font_size;
                 }
                 if (config.ui_font_size && typeof config.ui_font_size === 'number') {
-                    self.uiFontSize = self.clampFont(config.ui_font_size);
+                    self.desktopFonts.ui = config.ui_font_size;
                 }
                 if (config.emote_size && typeof config.emote_size === 'number') {
-                    self.emoteSize = self.clampFont(config.emote_size);
+                    self.desktopFonts.emote = config.emote_size;
                 }
+
+                // Generate VR defaults from desktop * scale (unless VR overrides exist in config)
+                self.vrFonts.chat = config.vr_font_size || Math.round(self.desktopFonts.chat * self.vrScale);
+                self.vrFonts.channel = config.vr_channel_font_size || Math.round(self.desktopFonts.channel * self.vrScale);
+                self.vrFonts.ui = config.vr_ui_font_size || Math.round(self.desktopFonts.ui * self.vrScale);
+                self.vrFonts.emote = config.vr_emote_size || Math.round(self.desktopFonts.emote * self.vrScale);
+
+                // Re-apply font settings for current mode (config may have changed defaults)
+                self.loadFontSettingsForMode(self.isVR);
                 self.applyAllFontSizes();
                 // Channel from config
                 if (config.channel && config.channel !== 'your_channel_name') {
