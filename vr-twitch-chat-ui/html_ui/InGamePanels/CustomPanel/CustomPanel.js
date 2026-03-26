@@ -19,8 +19,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.maxFontSize = 72;
         this.fontStep = 2;
 
-        // Emote cache: maps emote ID -> URL
+        // Emote cache: maps emote ID -> data URI (or 'loading'/'failed')
         this.emoteCache = {};
+        this.emotePending = {}; // emote IDs currently being fetched
 
         // Settings panel state
         this.settingsOpen = false;
@@ -567,11 +568,56 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.addChatMessage(displayName, color, message, emotesTag);
     }
 
+    // ---- Emote Fetching & Caching ----
+
+    getEmoteUrl(emoteId) {
+        return 'https://static-cdn.jtvnws.net/emoticons/v2/' + emoteId + '/default/dark/2.0';
+    }
+
+    fetchEmote(emoteId) {
+        // Already cached or in-flight
+        if (this.emoteCache[emoteId] || this.emotePending[emoteId]) return;
+
+        var self = this;
+        this.emotePending[emoteId] = true;
+
+        var url = this.getEmoteUrl(emoteId);
+        fetch(url)
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.blob();
+            })
+            .then(function (blob) {
+                var reader = new FileReader();
+                reader.onloadend = function () {
+                    self.emoteCache[emoteId] = reader.result; // data URI
+                    delete self.emotePending[emoteId];
+                    // Update any placeholder images waiting for this emote
+                    self.updateEmotePlaceholders(emoteId, reader.result);
+                };
+                reader.readAsDataURL(blob);
+            })
+            .catch(function () {
+                // Mark as failed so we don't retry endlessly
+                self.emoteCache[emoteId] = 'failed';
+                delete self.emotePending[emoteId];
+            });
+    }
+
+    updateEmotePlaceholders(emoteId, dataUri) {
+        // Find all placeholder images for this emote and swap in the data URI
+        if (!this.chatMessages) return;
+        var placeholders = this.chatMessages.querySelectorAll('img[data-emote-id="' + emoteId + '"]');
+        for (var i = 0; i < placeholders.length; i++) {
+            placeholders[i].src = dataUri;
+            placeholders[i].style.display = '';
+        }
+    }
+
     // ---- Emote Parsing ----
 
-    parseEmotes(emotesTag, messageText) {
+    parseEmotes(emotesTag) {
         // emotesTag format: "emoteId:start-end,start-end/emoteId:start-end"
-        // Returns array of {id, start, end} sorted by start position descending
         if (!emotesTag) return [];
 
         var emotes = [];
@@ -592,52 +638,65 @@ class IngamePanelCustomPanel extends TemplateElement {
             }
         }
 
-        // Sort descending by start so we can replace from end to start
-        emotes.sort(function (a, b) { return b.start - a.start; });
+        emotes.sort(function (a, b) { return a.start - b.start; });
         return emotes;
     }
 
-    buildMessageHTML(messageText, emotesTag) {
-        var emotes = this.parseEmotes(emotesTag, messageText);
+    buildMessageContent(textEl, messageText, emotesTag) {
+        var emotes = this.parseEmotes(emotesTag);
 
         if (emotes.length === 0) {
-            return this.escapeHTML(messageText);
+            textEl.textContent = ': ' + messageText;
+            return;
         }
 
-        // Build array of text segments and emote images
-        // Work from end to start to preserve indices
-        var chars = Array.from(messageText);
-        var result = [];
-        var lastIdx = chars.length;
+        // Kick off fetches for any emotes we haven't cached yet
+        for (var i = 0; i < emotes.length; i++) {
+            this.fetchEmote(emotes[i].id);
+        }
 
-        // Sort ascending for forward iteration
-        emotes.sort(function (a, b) { return a.start - b.start; });
+        // Build DOM nodes: text spans + img elements
+        var chars = Array.from(messageText);
+        // Leading colon+space
+        textEl.appendChild(document.createTextNode(': '));
 
         var pos = 0;
         for (var i = 0; i < emotes.length; i++) {
             var e = emotes[i];
             // Text before this emote
             if (e.start > pos) {
-                result.push(this.escapeHTML(chars.slice(pos, e.start).join('')));
+                textEl.appendChild(document.createTextNode(chars.slice(pos, e.start).join('')));
             }
-            // Emote image - use 2.0 scale for VR readability
-            var emoteUrl = 'https://static-cdn.jtvnbs.net/emoticons/v2/' + e.id + '/default/dark/2.0';
-            var emoteName = this.escapeHTML(chars.slice(e.start, e.end + 1).join(''));
-            result.push('<img class="twitch-emote" src="' + emoteUrl + '" alt="' + emoteName + '" title="' + emoteName + '" style="height:' + this.emoteSize + 'px" />');
+            // Emote image
+            var emoteName = chars.slice(e.start, e.end + 1).join('');
+            var img = document.createElement('img');
+            img.className = 'twitch-emote';
+            img.alt = emoteName;
+            img.title = emoteName;
+            img.setAttribute('data-emote-id', e.id);
+            img.style.height = this.emoteSize + 'px';
+
+            if (this.emoteCache[e.id] && this.emoteCache[e.id] !== 'failed') {
+                // Already cached — use data URI directly
+                img.src = this.emoteCache[e.id];
+            } else if (this.emoteCache[e.id] === 'failed') {
+                // Failed to load — show emote name as text instead
+                textEl.appendChild(document.createTextNode(emoteName));
+                pos = e.end + 1;
+                continue;
+            } else {
+                // Still loading — hide until data URI arrives
+                img.src = '';
+                img.style.display = 'none';
+            }
+
+            textEl.appendChild(img);
             pos = e.end + 1;
         }
         // Remaining text after last emote
         if (pos < chars.length) {
-            result.push(this.escapeHTML(chars.slice(pos).join('')));
+            textEl.appendChild(document.createTextNode(chars.slice(pos).join('')));
         }
-
-        return result.join('');
-    }
-
-    escapeHTML(text) {
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     // ---- Chat Messages ----
@@ -657,9 +716,8 @@ class IngamePanelCustomPanel extends TemplateElement {
         var textEl = document.createElement('span');
         textEl.className = 'chat-text';
 
-        // Build message with emotes
-        var messageHTML = this.buildMessageHTML(text, emotesTag);
-        textEl.innerHTML = ': ' + messageHTML;
+        // Build message with emotes (DOM-based, no innerHTML)
+        this.buildMessageContent(textEl, text, emotesTag);
 
         msgEl.appendChild(nameEl);
         msgEl.appendChild(textEl);
