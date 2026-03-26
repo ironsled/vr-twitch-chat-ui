@@ -30,7 +30,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.isVR = false;
         this.vrCheckInterval = null;
         this.vrDetectMethod = 'init';
-        this.vrWidthThreshold = 800; // effective px — panels wider than this = VR
+        this.vrWidthThreshold = 1200; // CSS px — panels wider than this = VR
 
         // Emote cache: maps emote ID -> data URI (or 'loading'/'failed')
         this.emoteCache = {};
@@ -306,17 +306,17 @@ class IngamePanelCustomPanel extends TemplateElement {
         } catch (e) {}
 
         // Strategy 2: Resolution-based heuristic
-        // In VR, the panel's internal rendering width is significantly larger
+        // In VR, MSFS renders panels at much higher internal CSS resolution
+        // (typically 1500px+ wide). Desktop panels are usually 300-700px wide.
+        // Do NOT multiply by devicePixelRatio — innerWidth already reflects
+        // the panel's actual rendering size, and DPR on high-res desktop
+        // monitors would cause false VR detection.
         var panelWidth = window.innerWidth || document.documentElement.clientWidth || 0;
         var panelHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-        var dpr = window.devicePixelRatio || 1;
 
-        // Use the larger dimension and factor in devicePixelRatio
-        var effectiveWidth = panelWidth * dpr;
-
-        detected = (effectiveWidth > this.vrWidthThreshold);
+        detected = (panelWidth > this.vrWidthThreshold);
         this.isVR = detected;
-        this.vrDetectMethod = 'resolution (' + panelWidth + 'x' + panelHeight + ' @' + dpr + 'x = ' + effectiveWidth + 'px eff)';
+        this.vrDetectMethod = 'resolution (' + panelWidth + 'x' + panelHeight + ', threshold ' + this.vrWidthThreshold + ')';
         this.updateVRLabel();
     }
 
