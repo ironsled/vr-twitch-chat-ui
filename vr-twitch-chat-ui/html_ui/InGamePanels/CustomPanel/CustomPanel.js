@@ -39,6 +39,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Settings panel state
         this.settingsOpen = false;
 
+        // Position pin state
+        this.positionPinned = false;
+
         // Storage prefix for persistent settings
         this.storagePrefix = 'SKYDECK_TWITCH_';
 
@@ -80,9 +83,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.uiFontValue = document.getElementById("UIFontValue");
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
         this.vrModeLabel = document.getElementById("VRModeLabel");
-
-        // Clear any stale position data from previous version that interfered with MSFS dragging
-        this.setStored('PanelPos', '');
+        this.pinPosBtn = document.getElementById("PinPosBtn");
 
         // Detect initial VR state, migrate old settings, restore matching font profile
         this.detectVRMode();
@@ -116,6 +117,16 @@ class IngamePanelCustomPanel extends TemplateElement {
                 self.changeFontSize('chat', -self.fontStep);
             });
         }
+
+        // Pin position button
+        if (this.pinPosBtn) {
+            this.pinPosBtn.addEventListener("click", function () {
+                self.togglePinPosition();
+            });
+        }
+
+        // Restore pinned position (one-time on load)
+        this.restorePinnedPosition();
 
         // Settings toggle
         if (this.settingsBtn) {
@@ -182,6 +193,86 @@ class IngamePanelCustomPanel extends TemplateElement {
         }
         if (this.settingsBtn) {
             this.settingsBtn.classList.toggle('active', this.settingsOpen);
+        }
+    }
+
+    // ---- Pin Position ----
+    //
+    // Manual save only — no auto-polling. Click P to snapshot current position.
+    // Click again to clear. Restores once on panel load, then hands off to MSFS.
+
+    togglePinPosition() {
+        if (this.positionPinned) {
+            // Unpin — clear saved position
+            this.setStored('PinnedPos', '');
+            this.positionPinned = false;
+            this.updatePinButton();
+            this.setStatus('Position unpinned');
+        } else {
+            // Pin — save current position
+            this.savePinnedPosition();
+            this.positionPinned = true;
+            this.updatePinButton();
+            this.setStatus('Position saved');
+        }
+        var self = this;
+        setTimeout(function () {
+            if (self.chatStatus) self.chatStatus.style.display = 'none';
+        }, 2000);
+    }
+
+    savePinnedPosition() {
+        var panel = this.ingameUi;
+        if (!panel) return;
+
+        var rect = panel.getBoundingClientRect();
+        var style = window.getComputedStyle(panel);
+        var pos = {
+            left: panel.style.left || style.left,
+            top: panel.style.top || style.top,
+            width: panel.style.width || style.width,
+            height: panel.style.height || style.height
+        };
+        this.setStored('PinnedPos', JSON.stringify(pos));
+    }
+
+    restorePinnedPosition() {
+        var posStr = this.getStored('PinnedPos');
+        if (!posStr) {
+            this.positionPinned = false;
+            this.updatePinButton();
+            return;
+        }
+
+        this.positionPinned = true;
+        this.updatePinButton();
+
+        var self = this;
+        try {
+            var pos = JSON.parse(posStr);
+            // Wait for panel to render, apply once, then stop
+            var attempts = 0;
+            var restoreInterval = setInterval(function () {
+                attempts++;
+                var panel = self.ingameUi;
+                if (panel && panel.getBoundingClientRect().width > 0) {
+                    if (pos.left) panel.style.left = pos.left;
+                    if (pos.top) panel.style.top = pos.top;
+                    if (pos.width) panel.style.width = pos.width;
+                    if (pos.height) panel.style.height = pos.height;
+                    clearInterval(restoreInterval);
+                }
+                if (attempts > 30) {
+                    clearInterval(restoreInterval);
+                }
+            }, 100);
+        } catch (e) {}
+    }
+
+    updatePinButton() {
+        if (this.pinPosBtn) {
+            this.pinPosBtn.classList.toggle('pinned', this.positionPinned);
+            this.pinPosBtn.title = this.positionPinned ? 'Position saved — click to unpin' : 'Save panel position';
         }
     }
 

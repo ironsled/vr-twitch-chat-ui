@@ -194,6 +194,23 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     background: #1a2a3a;
 }
 
+#PinPosBtn {
+    border-color: #555;
+    color: #aaa;
+}
+
+#PinPosBtn.pinned {
+    background: #2a4a2a;
+    border-color: #6c6;
+    color: #6c6;
+}
+
+#PinPosBtn.pinned:hover {
+    background: #3a2020;
+    border-color: #e55;
+    color: #e55;
+}
+
 #SettingsBtn {
     border-color: #555;
     color: #aaa;
