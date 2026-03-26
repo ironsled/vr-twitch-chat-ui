@@ -8,11 +8,9 @@ A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays yo
 ## Features
 
 - Live Twitch chat overlay inside MSFS 2024
-- **Twitch emote rendering** — native emotes displayed as images directly in chat
+- **Twitch emote support** — emotes shown as styled labels with image loading when available
 - **Adjustable font sizes** — independent controls for chat text, channel name, UI elements, and emote size
 - **Settings panel** — press **S** to open a font size control panel for all UI elements
-- **Position memory** — panel remembers its last position and size between sessions
-- **Reset position** — press **R** to snap the panel back to default placement if lost
 - **Persistent settings** — all font size preferences saved across sessions via MSFS data storage
 - VR-optimized defaults (28px chat, large emotes) with quick A-/A+ controls
 - Compact header to maximize chat viewing area
@@ -51,14 +49,12 @@ Or use the in-panel setup screen to enter your channel name. Font sizes can also
 3. Click **CONNECT**
 4. Use **A-** / **A+** to quickly adjust chat font size
 5. Press **S** to open the settings panel for fine-grained control over all font sizes and emote size
-6. Press **R** to reset panel position to default if the panel gets lost off-screen
-7. Click **X** to disconnect
+6. Click **X** to disconnect
 
 ## Header Controls
 
 | Button | Function |
 |--------|----------|
-| **R** | Reset panel position to default |
 | **S** | Toggle font size settings panel |
 | **A-** | Decrease chat font size |
 | **A+** | Increase chat font size |

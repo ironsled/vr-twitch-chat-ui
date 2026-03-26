@@ -26,16 +26,8 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Settings panel state
         this.settingsOpen = false;
 
-        // Position memory
+        // Storage prefix for persistent settings
         this.storagePrefix = 'SKYDECK_TWITCH_';
-        this.lastSavedPos = '';
-        this.positionRestored = false;
-
-        // Default panel position/size (used by reset)
-        this.defaultLeft = 50;
-        this.defaultTop = 50;
-        this.defaultWidth = 400;
-        this.defaultHeight = 600;
 
         this.initialize();
     }
@@ -69,19 +61,17 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.fontSizeLabel = document.getElementById("FontSizeLabel");
         this.settingsBtn = document.getElementById("SettingsBtn");
         this.settingsPanel = document.getElementById("SettingsPanel");
-        this.resetPosBtn = document.getElementById("ResetPosBtn");
-
         // Settings value displays
         this.channelFontValue = document.getElementById("ChannelFontValue");
         this.chatFontValue = document.getElementById("ChatFontValue");
         this.uiFontValue = document.getElementById("UIFontValue");
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
 
+        // Clear any stale position data from previous version that interfered with MSFS dragging
+        this.setStored('PanelPos', '');
+
         // Restore saved font settings from persistent storage (overrides config defaults)
         this.restoreFontSettings();
-
-        // Restore saved panel position
-        this.restorePanelPosition();
 
         // Load config file
         this.loadConfig();
@@ -108,13 +98,6 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.fontDownBtn) {
             this.fontDownBtn.addEventListener("click", function () {
                 self.changeFontSize('chat', -self.fontStep);
-            });
-        }
-
-        // Reset position button
-        if (this.resetPosBtn) {
-            this.resetPosBtn.addEventListener("click", function () {
-                self.resetPanelPosition();
             });
         }
 
@@ -160,11 +143,6 @@ class IngamePanelCustomPanel extends TemplateElement {
             }
         }, 5000);
 
-        // Periodic position save (every 2 seconds)
-        setInterval(function () {
-            self.savePanelPosition();
-        }, 2000);
-
         // Apply initial font sizes
         this.applyAllFontSizes();
     }
@@ -184,89 +162,6 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.settingsBtn) {
             this.settingsBtn.classList.toggle('active', this.settingsOpen);
         }
-    }
-
-    // ---- Panel Position Memory ----
-
-    getPanelElement() {
-        // The ingame-ui element or its parent is what gets positioned by MSFS
-        if (this.ingameUi) return this.ingameUi;
-        return null;
-    }
-
-    savePanelPosition() {
-        var panel = this.getPanelElement();
-        if (!panel) return;
-
-        var rect = panel.getBoundingClientRect();
-        // Also capture computed style for left/top/width/height which MSFS sets
-        var style = window.getComputedStyle(panel);
-        var pos = {
-            left: panel.style.left || style.left,
-            top: panel.style.top || style.top,
-            width: panel.style.width || style.width,
-            height: panel.style.height || style.height,
-            rectLeft: Math.round(rect.left),
-            rectTop: Math.round(rect.top),
-            rectWidth: Math.round(rect.width),
-            rectHeight: Math.round(rect.height)
-        };
-
-        var posStr = JSON.stringify(pos);
-        // Only save if position actually changed
-        if (posStr !== this.lastSavedPos) {
-            this.lastSavedPos = posStr;
-            this.setStored('PanelPos', posStr);
-        }
-    }
-
-    restorePanelPosition() {
-        var self = this;
-        var posStr = this.getStored('PanelPos');
-        if (!posStr) return;
-
-        try {
-            var pos = JSON.parse(posStr);
-            // Wait for the panel to be rendered, then apply
-            var attempts = 0;
-            var restoreInterval = setInterval(function () {
-                attempts++;
-                var panel = self.getPanelElement();
-                if (panel && panel.getBoundingClientRect().width > 0) {
-                    if (pos.left) panel.style.left = pos.left;
-                    if (pos.top) panel.style.top = pos.top;
-                    if (pos.width) panel.style.width = pos.width;
-                    if (pos.height) panel.style.height = pos.height;
-                    self.positionRestored = true;
-                    clearInterval(restoreInterval);
-                }
-                if (attempts > 30) {
-                    clearInterval(restoreInterval);
-                }
-            }, 100);
-        } catch (e) {
-            // Invalid stored data, ignore
-        }
-    }
-
-    resetPanelPosition() {
-        var panel = this.getPanelElement();
-        if (!panel) return;
-
-        panel.style.left = this.defaultLeft + 'px';
-        panel.style.top = this.defaultTop + 'px';
-        panel.style.width = this.defaultWidth + 'px';
-        panel.style.height = this.defaultHeight + 'px';
-
-        // Clear saved position so it uses defaults next time too
-        this.setStored('PanelPos', '');
-        this.lastSavedPos = '';
-
-        this.setStatus('Position reset');
-        var self = this;
-        setTimeout(function () {
-            if (self.chatStatus) self.chatStatus.style.display = 'none';
-        }, 2000);
     }
 
     // ---- Persistent Storage Helpers ----

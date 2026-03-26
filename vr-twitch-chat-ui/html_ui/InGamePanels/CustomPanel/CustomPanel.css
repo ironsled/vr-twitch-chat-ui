@@ -176,17 +176,6 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     color: #fff;
 }
 
-#ResetPosBtn {
-    border-color: #555;
-    color: #6cf;
-}
-
-#ResetPosBtn:hover {
-    border-color: #6cf;
-    color: #fff;
-    background: #1a3040;
-}
-
 #SettingsBtn {
     border-color: #555;
     color: #aaa;
