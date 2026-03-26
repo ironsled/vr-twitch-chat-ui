@@ -398,6 +398,25 @@ class IngamePanelCustomPanel extends TemplateElement {
             emotes[i].style.height = this.emoteSize + 'px';
         }
 
+        // Settings panel — labels, values, buttons all scale with UI font
+        var settingsLabels = document.querySelectorAll('.settings-label');
+        for (var i = 0; i < settingsLabels.length; i++) {
+            settingsLabels[i].style.fontSize = this.uiFontSize + 'px';
+        }
+        var settingsValues = document.querySelectorAll('.settings-value');
+        for (var i = 0; i < settingsValues.length; i++) {
+            settingsValues[i].style.fontSize = Math.max(9, this.uiFontSize - 1) + 'px';
+        }
+        var settingsBtns = document.querySelectorAll('.settings-btn');
+        for (var i = 0; i < settingsBtns.length; i++) {
+            settingsBtns[i].style.fontSize = this.uiFontSize + 'px';
+        }
+
+        // VR mode label
+        if (this.vrModeLabel) {
+            this.vrModeLabel.style.fontSize = Math.max(9, this.uiFontSize - 1) + 'px';
+        }
+
         // Settings panel value displays
         if (this.channelFontValue) this.channelFontValue.textContent = this.channelFontSize;
         if (this.chatFontValue) this.chatFontValue.textContent = this.chatFontSize;
