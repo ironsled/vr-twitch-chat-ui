@@ -2,22 +2,22 @@
   "content": [
     {
       "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.css",
-      "size": 4129,
+      "size": 5290,
       "date": 132441482909180874
     },
     {
       "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.html",
-      "size": 2385,
+      "size": 4914,
       "date": 132440507097241168
     },
     {
       "path": "html_ui/InGamePanels/CustomPanel/CustomPanel.js",
-      "size": 10638,
+      "size": 23178,
       "date": 132442481411972180
     },
     {
       "path": "html_ui/InGamePanels/CustomPanel/config.json",
-      "size": 58,
+      "size": 133,
       "date": 132441482909180874
     },
     {

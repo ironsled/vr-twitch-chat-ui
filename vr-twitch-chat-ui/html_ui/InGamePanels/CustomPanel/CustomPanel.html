@@ -37,10 +37,47 @@
                 <div id="ChatHeader">
                     <span id="ChatChannelName"></span>
                     <div id="ChatControls">
-                        <button id="FontDownBtn" class="ctrl-btn">A-</button>
+                        <button id="ResetPosBtn" class="ctrl-btn reset-btn" title="Reset panel position">R</button>
+                        <button id="SettingsBtn" class="ctrl-btn" title="Font Settings">S</button>
+                        <button id="FontDownBtn" class="ctrl-btn" title="Decrease chat font">A-</button>
                         <span id="FontSizeLabel">28</span>
-                        <button id="FontUpBtn" class="ctrl-btn">A+</button>
+                        <button id="FontUpBtn" class="ctrl-btn" title="Increase chat font">A+</button>
                         <button id="DisconnectBtn" class="ctrl-btn">X</button>
+                    </div>
+                </div>
+                <!-- Settings panel -->
+                <div id="SettingsPanel">
+                    <div class="settings-row">
+                        <span class="settings-label">Channel Name</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn" data-target="channel" data-dir="-1">-</button>
+                            <span class="settings-value" id="ChannelFontValue">16</span>
+                            <button class="ctrl-btn settings-btn" data-target="channel" data-dir="1">+</button>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Chat Text</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn" data-target="chat" data-dir="-1">-</button>
+                            <span class="settings-value" id="ChatFontValue">28</span>
+                            <button class="ctrl-btn settings-btn" data-target="chat" data-dir="1">+</button>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">UI Controls</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn" data-target="ui" data-dir="-1">-</button>
+                            <span class="settings-value" id="UIFontValue">12</span>
+                            <button class="ctrl-btn settings-btn" data-target="ui" data-dir="1">+</button>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Emote Size</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn" data-target="emote" data-dir="-1">-</button>
+                            <span class="settings-value" id="EmoteSizeValue">28</span>
+                            <button class="ctrl-btn settings-btn" data-target="emote" data-dir="1">+</button>
+                        </div>
                     </div>
                 </div>
                 <div id="ChatMessages"></div>

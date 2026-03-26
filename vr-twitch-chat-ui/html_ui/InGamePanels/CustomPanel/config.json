@@ -1,4 +1,7 @@
 {
     "channel": "LoneWolfXX_Live",
-    "font_size": 28
+    "font_size": 28,
+    "channel_font_size": 16,
+    "ui_font_size": 12,
+    "emote_size": 28
 }
