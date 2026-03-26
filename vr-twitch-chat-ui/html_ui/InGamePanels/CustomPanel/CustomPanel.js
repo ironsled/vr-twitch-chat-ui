@@ -12,9 +12,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Font size defaults (desktop)
         this.desktopFonts = { chat: 22, channel: 16, ui: 12, emote: 22 };
         // Font size defaults (VR) — larger for headset readability
-        this.vrFonts = { chat: 40, channel: 28, ui: 20, emote: 40 };
+        this.vrFonts = { chat: 48, channel: 32, ui: 24, emote: 48 };
         // VR scale multiplier applied to desktop defaults to generate VR defaults
-        this.vrScale = 1.8;
+        this.vrScale = 2.2;
 
         // Active font sizes (set from whichever profile is active)
         this.chatFontSize = 22;
@@ -23,12 +23,14 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.emoteSize = 22;
 
         this.minFontSize = 8;
-        this.maxFontSize = 100;
+        this.maxFontSize = 120;
         this.fontStep = 2;
 
         // VR detection
         this.isVR = false;
         this.vrCheckInterval = null;
+        this.vrDetectMethod = 'init';
+        this.vrWidthThreshold = 800; // effective px — panels wider than this = VR
 
         // Emote cache: maps emote ID -> data URI (or 'loading'/'failed')
         this.emoteCache = {};
@@ -184,17 +186,46 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     // ---- VR Mode Detection ----
+    //
+    // Multiple detection strategies:
+    // 1. SimVar 'IS VR ENABLED' (may not be available in ingame panels)
+    // 2. Resolution-based: in VR, MSFS renders panels at much higher internal
+    //    resolution. A panel that's ~400px on desktop becomes ~1000px+ in VR.
+    //    We use window.innerWidth as the primary heuristic.
+    // 3. devicePixelRatio: may differ between VR and desktop rendering
+    //
+    // The resolution threshold is configurable via config.json "vr_width_threshold"
+    // Default: 800px — panels wider than this are assumed to be in VR.
 
     detectVRMode() {
-        // Try SimVar first (MSFS Coherent), fall back to false
+        var detected = false;
+
+        // Strategy 1: SimVar (most reliable if available)
         try {
             if (typeof SimVar !== 'undefined' && SimVar.GetSimVarValue) {
                 var vrVal = SimVar.GetSimVarValue('IS VR ENABLED', 'Boolean');
-                this.isVR = !!vrVal;
+                if (vrVal !== undefined && vrVal !== null) {
+                    detected = !!vrVal;
+                    this.isVR = detected;
+                    this.vrDetectMethod = 'simvar';
+                    this.updateVRLabel();
+                    return;
+                }
             }
-        } catch (e) {
-            this.isVR = false;
-        }
+        } catch (e) {}
+
+        // Strategy 2: Resolution-based heuristic
+        // In VR, the panel's internal rendering width is significantly larger
+        var panelWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        var panelHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        var dpr = window.devicePixelRatio || 1;
+
+        // Use the larger dimension and factor in devicePixelRatio
+        var effectiveWidth = panelWidth * dpr;
+
+        detected = (effectiveWidth > this.vrWidthThreshold);
+        this.isVR = detected;
+        this.vrDetectMethod = 'resolution (' + panelWidth + 'x' + panelHeight + ' @' + dpr + 'x = ' + effectiveWidth + 'px eff)';
         this.updateVRLabel();
     }
 
@@ -208,18 +239,18 @@ class IngamePanelCustomPanel extends TemplateElement {
             this.loadFontSettingsForMode(this.isVR);
             this.applyAllFontSizes();
 
-            this.setStatus(this.isVR ? 'Switched to VR mode' : 'Switched to Desktop mode');
+            this.setStatus(this.isVR ? 'VR detected — fonts scaled up' : 'Desktop detected — fonts scaled down');
             var self = this;
             setTimeout(function () {
                 if (self.chatStatus) self.chatStatus.style.display = 'none';
-            }, 2000);
+            }, 3000);
         }
     }
 
     updateVRLabel() {
         if (this.vrModeLabel) {
             this.vrModeLabel.textContent = this.isVR ? 'VR' : 'DT';
-            this.vrModeLabel.title = this.isVR ? 'VR Mode' : 'Desktop Mode';
+            this.vrModeLabel.title = (this.isVR ? 'VR Mode' : 'Desktop Mode') + ' [' + this.vrDetectMethod + ']';
             this.vrModeLabel.className = this.isVR ? 'vr-label vr-active' : 'vr-label';
         }
     }
@@ -386,6 +417,10 @@ class IngamePanelCustomPanel extends TemplateElement {
                 // VR scale multiplier from config
                 if (config.vr_scale && typeof config.vr_scale === 'number') {
                     self.vrScale = config.vr_scale;
+                }
+                // VR detection threshold from config
+                if (config.vr_width_threshold && typeof config.vr_width_threshold === 'number') {
+                    self.vrWidthThreshold = config.vr_width_threshold;
                 }
 
                 // Desktop font defaults from config
