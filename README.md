@@ -1,6 +1,6 @@
 # VR Twitch Chat UI for MSFS 2024
 
-A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays your Twitch chat overlay directly in the cockpit. Auto-detects VR mode and scales fonts automatically for headset readability.
+A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays your Twitch chat overlay directly in the cockpit. Auto-detects VR mode and scales all fonts automatically for headset readability.
 
 ![MSFS 2024](https://img.shields.io/badge/MSFS-2024-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -8,12 +8,13 @@ A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays yo
 ## Features
 
 - Live Twitch chat overlay inside MSFS 2024
-- **Auto VR/Desktop font switching** — detects VR mode via SimVar and scales all fonts automatically (1.8x default). No manual resizing when switching between VR and desktop.
-- **Separate font profiles** — VR and desktop font sizes saved independently. Tweak in VR, it only affects VR. Tweak on desktop, it only affects desktop.
+- **Auto VR/Desktop font switching** — detects VR by panel resolution and scales all fonts automatically (2.2x default). No manual resizing when switching.
+- **Separate font profiles** — VR and desktop sizes saved independently. Tweak in VR, only VR is affected. Tweak on desktop, only desktop is affected.
+- **Pin position (P)** — save panel position with one click. Restores on next load, then hands off to MSFS for normal dragging. Click again to unpin.
 - **VR/DT mode indicator** — header shows current mode (blue = VR active)
 - **Twitch emote support** — emotes shown as styled labels with image loading when available
 - **Adjustable font sizes** — independent controls for chat text, channel name, UI elements, and emote size
-- **Settings panel** — press **S** to open font size controls for all UI elements
+- **Settings panel (S)** — font size controls for all UI elements, all scale properly in VR
 - **Persistent settings** — font preferences saved per-mode across sessions via MSFS data storage
 - Compact header to maximize chat viewing area
 - Connects via Twitch IRC (no authentication required for read-only chat)
@@ -39,7 +40,7 @@ Edit `vr-twitch-chat-ui/html_ui/InGamePanels/CustomPanel/config.json`:
     "channel_font_size": 16,
     "ui_font_size": 12,
     "emote_size": 22,
-    "vr_scale": 1.8
+    "vr_scale": 2.2
 }
 ```
 
@@ -49,9 +50,9 @@ Edit `vr-twitch-chat-ui/html_ui/InGamePanels/CustomPanel/config.json`:
 | `channel_font_size` | Desktop channel name size (px) |
 | `ui_font_size` | Desktop UI controls size (px) |
 | `emote_size` | Desktop emote size (px) |
-| `vr_scale` | Multiplier applied to desktop sizes for VR defaults (default 1.8) |
+| `vr_scale` | Multiplier applied to desktop sizes for VR defaults (default 2.2) |
 
-Optional VR overrides: `vr_font_size`, `vr_channel_font_size`, `vr_ui_font_size`, `vr_emote_size` — set these to use exact VR values instead of the multiplier.
+Optional VR overrides: `vr_font_size`, `vr_channel_font_size`, `vr_ui_font_size`, `vr_emote_size` — set exact VR values instead of using the multiplier.
 
 Font sizes can also be adjusted live via the settings panel and will persist automatically per mode.
 
@@ -61,17 +62,18 @@ Font sizes can also be adjusted live via the settings panel and will persist aut
 2. Enter your Twitch channel name (or pre-configure in `config.json`)
 3. Click **CONNECT**
 4. Use **A-** / **A+** to quickly adjust chat font size
-5. Press **S** to open the settings panel for fine-grained control over all font sizes and emote size
-6. Click **X** to disconnect
+5. Press **S** to open the settings panel for fine-grained control over all font sizes
+6. Press **P** to pin panel position — restores on next load. Press again to unpin.
+7. Click **X** to disconnect
 
 ## Header Controls
 
 | Element | Function |
 |---------|----------|
 | **VR/DT** | Current mode indicator (auto-detected) |
+| **P** | Pin/unpin panel position (green = saved) |
 | **S** | Toggle font size settings panel |
-| **A-** | Decrease chat font size |
-| **A+** | Increase chat font size |
+| **A-** / **A+** | Adjust chat font size |
 | **X** | Disconnect from chat |
 
 ## Package Structure
