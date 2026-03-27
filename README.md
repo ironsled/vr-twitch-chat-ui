@@ -10,6 +10,7 @@ A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays yo
 - Live Twitch chat overlay inside MSFS 2024
 - **Auto VR/Desktop font switching** — detects VR by panel resolution and scales all fonts automatically (2.2x default). No manual resizing when switching.
 - **Separate font profiles** — VR and desktop sizes saved independently. Tweak in VR, only VR is affected. Tweak on desktop, only desktop is affected.
+- **Transparent background (T)** — toggle panel background transparency so the sim scenery shows through while chat remains readable. Setting persists across sessions.
 - **Pin position (P)** — save panel position with one click. Restores on next load, then hands off to MSFS for normal dragging. Click again to unpin.
 - **VR/DT mode indicator** — header shows current mode (blue = VR active)
 - **Twitch emote support** — emotes shown as styled labels with image loading when available
@@ -67,7 +68,8 @@ Font sizes can also be adjusted live via the settings panel and will persist aut
 3. Click **CONNECT**
 4. Use **A-** / **A+** to quickly adjust chat font size
 5. Press **S** to open the settings panel for fine-grained control over all font sizes
-6. Press **P** to pin panel position — restores on next load. Press again to unpin.
+6. Press **T** to toggle transparent background — see the sim through the panel
+7. Press **P** to pin panel position — restores on next load. Press again to unpin.
 7. Click **X** to disconnect
 
 ## Header Controls
@@ -75,6 +77,7 @@ Font sizes can also be adjusted live via the settings panel and will persist aut
 | Element | Function |
 |---------|----------|
 | **VR/DT** | Current mode indicator (auto-detected) |
+| **T** | Toggle transparent background (green = active) |
 | **P** | Pin/unpin panel position (green = saved) |
 | **S** | Toggle font size settings panel |
 | **A-** / **A+** | Adjust chat font size |
