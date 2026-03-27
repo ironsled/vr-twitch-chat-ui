@@ -211,6 +211,63 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     color: #e55;
 }
 
+/* Transparent background toggle */
+#TransBgBtn {
+    border-color: #555;
+    color: #aaa;
+}
+
+#TransBgBtn.active {
+    background: #1a3a1a;
+    border-color: #6c6;
+    color: #6c6;
+}
+
+/* Transparent mode — clear ALL backgrounds including MSFS wrappers */
+body.transparent-mode,
+body.transparent-mode ingamepanel-skydecktwitch,
+body.transparent-mode ingame-ui,
+body.transparent-mode ingame-ui .ingameUiFrame,
+body.transparent-mode ingame-ui .ingameUiWrapper,
+body.transparent-mode ingame-ui .ingameUiContent,
+body.transparent-mode ingame-ui .panelContent,
+body.transparent-mode ingame-ui [class*="content"],
+body.transparent-mode ingame-ui [class*="wrapper"],
+body.transparent-mode ingame-ui [class*="panel"],
+body.transparent-mode ingame-ui [class*="frame"] {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+body.transparent-mode ingame-ui-header {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-bottom: none !important;
+}
+
+body.transparent-mode #ChatWrap {
+    background: transparent !important;
+}
+
+body.transparent-mode #ChatHeader {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+}
+
+body.transparent-mode #ChatMessages {
+    background: transparent !important;
+}
+
+body.transparent-mode #ChatStatus {
+    background: transparent !important;
+    border-top-color: transparent !important;
+}
+
+body.transparent-mode #SettingsPanel {
+    background: rgba(26, 26, 46, 0.85) !important;
+    border-bottom-color: transparent !important;
+}
+
 #SettingsBtn {
     border-color: #555;
     color: #aaa;

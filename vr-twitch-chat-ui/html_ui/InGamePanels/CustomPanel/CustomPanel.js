@@ -42,6 +42,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Position pin state
         this.positionPinned = false;
 
+        // Transparent background state
+        this.transparentBg = false;
+
         // Storage prefix for persistent settings
         this.storagePrefix = 'SKYDECK_TWITCH_';
 
@@ -84,6 +87,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
         this.vrModeLabel = document.getElementById("VRModeLabel");
         this.pinPosBtn = document.getElementById("PinPosBtn");
+        this.transBgBtn = document.getElementById("TransBgBtn");
 
         // Detect initial VR state, migrate old settings, restore matching font profile
         this.detectVRMode();
@@ -124,6 +128,16 @@ class IngamePanelCustomPanel extends TemplateElement {
                 self.togglePinPosition();
             });
         }
+
+        // Transparent background toggle
+        if (this.transBgBtn) {
+            this.transBgBtn.addEventListener("click", function () {
+                self.toggleTransparentBg();
+            });
+        }
+
+        // Restore transparent background setting
+        this.restoreTransparentBg();
 
         // Restore pinned position (one-time on load)
         this.restorePinnedPosition();
@@ -194,6 +208,28 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.settingsBtn) {
             this.settingsBtn.classList.toggle('active', this.settingsOpen);
         }
+    }
+
+    // ---- Transparent Background ----
+
+    toggleTransparentBg() {
+        this.transparentBg = !this.transparentBg;
+        this.applyTransparentBg();
+        this.setStored('TransparentBg', this.transparentBg ? '1' : '');
+    }
+
+    applyTransparentBg() {
+        document.body.classList.toggle('transparent-mode', this.transparentBg);
+        if (this.transBgBtn) {
+            this.transBgBtn.classList.toggle('active', this.transparentBg);
+            this.transBgBtn.title = this.transparentBg ? 'Background transparent — click to restore' : 'Toggle transparent background';
+        }
+    }
+
+    restoreTransparentBg() {
+        var val = this.getStored('TransparentBg');
+        this.transparentBg = (val === '1');
+        this.applyTransparentBg();
     }
 
     // ---- Pin Position ----
