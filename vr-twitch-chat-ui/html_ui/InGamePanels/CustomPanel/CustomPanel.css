@@ -203,23 +203,6 @@ ingame-ui#CustomPanel .ingameUiWrapper {
     background: #1a2a3a;
 }
 
-#PinPosBtn {
-    border-color: #555;
-    color: #aaa;
-}
-
-#PinPosBtn.pinned {
-    background: #2a4a2a;
-    border-color: #6c6;
-    color: #6c6;
-}
-
-#PinPosBtn.pinned:hover {
-    background: #3a2020;
-    border-color: #e55;
-    color: #e55;
-}
-
 /* Transparent background toggle */
 #TransBgBtn {
     border-color: #555;
@@ -396,18 +379,6 @@ body.transparent-mode #SettingsPanel {
     color: #888;
 }
 
-/* Reset position button */
-.reset-pos-btn {
-    font-size: 10px;
-    letter-spacing: 1px;
-    color: #e55;
-    border-color: #633;
-}
-.reset-pos-btn:hover {
-    color: #ef5350;
-    border-color: #ef5350;
-    background: #3a2020;
-}
 
 /* Chat Messages */
 #ChatMessages {

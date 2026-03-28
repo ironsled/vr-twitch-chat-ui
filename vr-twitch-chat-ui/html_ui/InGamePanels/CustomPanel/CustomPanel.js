@@ -39,9 +39,6 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Settings panel state
         this.settingsOpen = false;
 
-        // Position auto-save state
-        this.lastSavedRect = '';
-
         // Transparent background state
         this.transparentBg = false;
 
@@ -101,12 +98,10 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.uiFontValue = document.getElementById("UIFontValue");
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
         this.vrModeLabel = document.getElementById("VRModeLabel");
-        this.pinPosBtn = document.getElementById("PinPosBtn");
         this.transBgBtn = document.getElementById("TransBgBtn");
         this.chatColorPreview = document.getElementById("ChatColorPreview");
         this.emoteColorPreview = document.getElementById("EmoteColorPreview");
         this.twitchColorToggle = document.getElementById("TwitchColorToggle");
-        this.resetPosBtn = document.getElementById("ResetPosBtn");
 
         // Detect initial VR state, migrate old settings, restore matching font profile
         this.detectVRMode();
@@ -141,20 +136,6 @@ class IngamePanelCustomPanel extends TemplateElement {
             });
         }
 
-        // Pin position button
-        if (this.pinPosBtn) {
-            this.pinPosBtn.addEventListener("click", function () {
-                self.togglePinPosition();
-            });
-        }
-
-        // Reset position button
-        if (this.resetPosBtn) {
-            this.resetPosBtn.addEventListener("click", function () {
-                self.resetPanelPosition();
-            });
-        }
-
         // Transparent background toggle
         if (this.transBgBtn) {
             this.transBgBtn.addEventListener("click", function () {
@@ -167,10 +148,6 @@ class IngamePanelCustomPanel extends TemplateElement {
 
         // Restore font color settings
         this.restoreColorSettings();
-
-        // Restore saved panel position and start auto-save
-        this.restorePanelPosition();
-        this.startPositionAutoSave();
 
         // Settings toggle
         if (this.settingsBtn) {
@@ -221,12 +198,10 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.ingameUi) {
             this.ingameUi.addEventListener("panelActive", function () {
                 self.panelActive = true;
-                self.restorePanelPosition();
                 self.ensureConnected();
             });
             this.ingameUi.addEventListener("panelInactive", function () {
                 self.panelActive = false;
-                self.savePanelPosition();
             });
         }
 
@@ -369,139 +344,6 @@ class IngamePanelCustomPanel extends TemplateElement {
             } else {
                 chatNames[i].style.color = '#9146ff';
             }
-        }
-    }
-
-    // ---- Panel Position ----
-    //
-    // Diagnostic version — shows debug info in status bar to identify
-    // whether the issue is storage, element targeting, or MSFS override.
-
-    togglePinPosition() {
-        this.savePanelPosition();
-        var stored = this.getStored('PinnedPos');
-        this.setStatus('SAVED: ' + (stored ? stored.substring(0, 60) : 'EMPTY'));
-        if (this.pinPosBtn) this.pinPosBtn.classList.add('pinned');
-    }
-
-    resetPanelPosition() {
-        this.setStored('PinnedPos', '');
-        this._lastPosBackup = '';
-        this.lastSavedRect = '';
-
-        // Clear styles on ingame-ui and all ancestors up to body
-        var el = this.ingameUi;
-        for (var i = 0; i < 10 && el && el !== document.body; i++) {
-            el.style.left = '';
-            el.style.top = '';
-            el.style.width = '';
-            el.style.height = '';
-            el = el.parentElement;
-        }
-        this.setStatus('Position reset');
-        var self = this;
-        setTimeout(function () {
-            if (self.chatStatus) self.chatStatus.style.display = 'none';
-        }, 2000);
-    }
-
-    getRectString() {
-        var panel = this.ingameUi;
-        if (!panel) return '';
-        var r = panel.getBoundingClientRect();
-        return Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + ',' + Math.round(r.height);
-    }
-
-    savePanelPosition() {
-        var panel = this.ingameUi;
-        if (!panel) return;
-        var r = panel.getBoundingClientRect();
-        if (r.width < 10 || r.height < 10) return;
-        var pos = {
-            left: Math.round(r.left) + 'px',
-            top: Math.round(r.top) + 'px',
-            width: Math.round(r.width) + 'px',
-            height: Math.round(r.height) + 'px'
-        };
-        var posStr = JSON.stringify(pos);
-        this.setStored('PinnedPos', posStr);
-        this._lastPosBackup = posStr;
-        this.lastSavedRect = this.getRectString();
-    }
-
-    startPositionAutoSave() {
-        var self = this;
-        setTimeout(function () {
-            self.lastSavedRect = self.getRectString();
-        }, 3000);
-
-        setInterval(function () {
-            if (!self.panelActive) return;
-            if (self._isRestoring) return;
-            var currentRect = self.getRectString();
-            if (!currentRect) return;
-            if (currentRect !== self.lastSavedRect) {
-                self.savePanelPosition();
-            }
-        }, 2000);
-    }
-
-    restorePanelPosition() {
-        var posStr = this.getStored('PinnedPos') || this._lastPosBackup || '';
-
-        // Show diagnostic info
-        if (!posStr) {
-            this.setStatus('RESTORE: no saved position found');
-            return;
-        }
-
-        var self = this;
-        try {
-            var pos = JSON.parse(posStr);
-            self._isRestoring = true;
-
-            // Log what element chain looks like
-            var elChain = '';
-            var el = self.ingameUi;
-            for (var i = 0; i < 5 && el; i++) {
-                var cs = window.getComputedStyle(el);
-                elChain += el.tagName + '(' + cs.position + ') ';
-                el = el.parentElement;
-            }
-            self.setStatus('RESTORING: ' + pos.left + ',' + pos.top + ' | ' + elChain);
-
-            // Try applying to EVERY element in the chain
-            var applyToAll = function () {
-                var target = self.ingameUi;
-                for (var i = 0; i < 5 && target; i++) {
-                    target.style.setProperty('left', pos.left, 'important');
-                    target.style.setProperty('top', pos.top, 'important');
-                    target.style.setProperty('width', pos.width, 'important');
-                    target.style.setProperty('height', pos.height, 'important');
-                    target = target.parentElement;
-                    if (target === document.body) break;
-                }
-            };
-
-            // Apply immediately
-            applyToAll();
-
-            // Keep applying for 5 seconds
-            var applyCount = 0;
-            var restoreInterval = setInterval(function () {
-                applyCount++;
-                applyToAll();
-                if (applyCount >= 50) {
-                    clearInterval(restoreInterval);
-                    self._isRestoring = false;
-                    self.lastSavedRect = self.getRectString();
-                    // Show final position vs target
-                    var r = self.ingameUi ? self.ingameUi.getBoundingClientRect() : {};
-                    self.setStatus('DONE: target=' + pos.left + ',' + pos.top + ' actual=' + Math.round(r.left) + 'px,' + Math.round(r.top) + 'px');
-                }
-            }, 100);
-        } catch (e) {
-            self.setStatus('RESTORE ERROR: ' + e.message);
         }
     }
 
