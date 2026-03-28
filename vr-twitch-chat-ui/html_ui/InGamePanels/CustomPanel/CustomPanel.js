@@ -381,11 +381,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.savePanelPosition();
         var stored = this.getStored('PinnedPos');
         this.setStatus('SAVED: ' + (stored ? stored.substring(0, 60) : 'EMPTY'));
-        var self = this;
         if (this.pinPosBtn) this.pinPosBtn.classList.add('pinned');
-        setTimeout(function () {
-            if (self.pinPosBtn) self.pinPosBtn.classList.remove('pinned');
-        }, 2000);
     }
 
     resetPanelPosition() {
