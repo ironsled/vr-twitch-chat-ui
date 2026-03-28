@@ -374,35 +374,17 @@ class IngamePanelCustomPanel extends TemplateElement {
 
     // ---- Panel Position ----
     //
-    // Finds the actual positioned element MSFS uses (walks up from ingame-ui),
-    // uses MutationObserver to catch and override MSFS repositioning,
-    // saves to both storage backends + instance variable.
-
-    getPanelElement() {
-        // MSFS may position the ingame-ui itself, or a parent wrapper.
-        // Walk up to find the element with explicit left/top or position:absolute/fixed.
-        var el = this.ingameUi;
-        if (!el) return null;
-        // Check parent elements — MSFS often wraps ingame-ui in a positioned container
-        var check = el;
-        for (var i = 0; i < 5 && check; i++) {
-            var cs = window.getComputedStyle(check);
-            if (cs.position === 'absolute' || cs.position === 'fixed') {
-                return check;
-            }
-            check = check.parentElement;
-        }
-        return el; // fallback to ingame-ui itself
-    }
+    // Diagnostic version — shows debug info in status bar to identify
+    // whether the issue is storage, element targeting, or MSFS override.
 
     togglePinPosition() {
         this.savePanelPosition();
-        this.setStatus('Position saved');
+        var stored = this.getStored('PinnedPos');
+        this.setStatus('SAVED: ' + (stored ? stored.substring(0, 60) : 'EMPTY'));
         var self = this;
         if (this.pinPosBtn) this.pinPosBtn.classList.add('pinned');
         setTimeout(function () {
             if (self.pinPosBtn) self.pinPosBtn.classList.remove('pinned');
-            if (self.chatStatus) self.chatStatus.style.display = 'none';
         }, 2000);
     }
 
@@ -410,14 +392,15 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.setStored('PinnedPos', '');
         this._lastPosBackup = '';
         this.lastSavedRect = '';
-        this._restorePos = null;
 
-        var panel = this.getPanelElement();
-        if (panel) {
-            panel.style.left = '';
-            panel.style.top = '';
-            panel.style.width = '';
-            panel.style.height = '';
+        // Clear styles on ingame-ui and all ancestors up to body
+        var el = this.ingameUi;
+        for (var i = 0; i < 10 && el && el !== document.body; i++) {
+            el.style.left = '';
+            el.style.top = '';
+            el.style.width = '';
+            el.style.height = '';
+            el = el.parentElement;
         }
         this.setStatus('Position reset');
         var self = this;
@@ -427,14 +410,14 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     getRectString() {
-        var panel = this.getPanelElement();
+        var panel = this.ingameUi;
         if (!panel) return '';
         var r = panel.getBoundingClientRect();
         return Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + ',' + Math.round(r.height);
     }
 
     savePanelPosition() {
-        var panel = this.getPanelElement();
+        var panel = this.ingameUi;
         if (!panel) return;
         var r = panel.getBoundingClientRect();
         if (r.width < 10 || r.height < 10) return;
@@ -467,55 +450,63 @@ class IngamePanelCustomPanel extends TemplateElement {
         }, 2000);
     }
 
-    applyPosition(pos) {
-        var panel = this.getPanelElement();
-        if (!panel) return;
-        panel.style.setProperty('left', pos.left, 'important');
-        panel.style.setProperty('top', pos.top, 'important');
-        panel.style.setProperty('width', pos.width, 'important');
-        panel.style.setProperty('height', pos.height, 'important');
-    }
-
     restorePanelPosition() {
         var posStr = this.getStored('PinnedPos') || this._lastPosBackup || '';
-        if (!posStr) return;
+
+        // Show diagnostic info
+        if (!posStr) {
+            this.setStatus('RESTORE: no saved position found');
+            return;
+        }
 
         var self = this;
         try {
             var pos = JSON.parse(posStr);
-            self._restorePos = pos;
             self._isRestoring = true;
 
-            // Apply immediately
-            self.applyPosition(pos);
-
-            // Use MutationObserver to catch MSFS overriding our position
-            var panel = self.getPanelElement();
-            if (panel && typeof MutationObserver !== 'undefined') {
-                var observer = new MutationObserver(function () {
-                    self.applyPosition(pos);
-                });
-                observer.observe(panel, { attributes: true, attributeFilter: ['style'] });
-                // Stop observing after 5 seconds so user can drag freely
-                setTimeout(function () {
-                    observer.disconnect();
-                    self._isRestoring = false;
-                    self.lastSavedRect = self.getRectString();
-                }, 5000);
+            // Log what element chain looks like
+            var elChain = '';
+            var el = self.ingameUi;
+            for (var i = 0; i < 5 && el; i++) {
+                var cs = window.getComputedStyle(el);
+                elChain += el.tagName + '(' + cs.position + ') ';
+                el = el.parentElement;
             }
+            self.setStatus('RESTORING: ' + pos.left + ',' + pos.top + ' | ' + elChain);
 
-            // Also hammer it on intervals as fallback
+            // Try applying to EVERY element in the chain
+            var applyToAll = function () {
+                var target = self.ingameUi;
+                for (var i = 0; i < 5 && target; i++) {
+                    target.style.setProperty('left', pos.left, 'important');
+                    target.style.setProperty('top', pos.top, 'important');
+                    target.style.setProperty('width', pos.width, 'important');
+                    target.style.setProperty('height', pos.height, 'important');
+                    target = target.parentElement;
+                    if (target === document.body) break;
+                }
+            };
+
+            // Apply immediately
+            applyToAll();
+
+            // Keep applying for 5 seconds
             var applyCount = 0;
             var restoreInterval = setInterval(function () {
                 applyCount++;
-                self.applyPosition(pos);
+                applyToAll();
                 if (applyCount >= 50) {
                     clearInterval(restoreInterval);
                     self._isRestoring = false;
                     self.lastSavedRect = self.getRectString();
+                    // Show final position vs target
+                    var r = self.ingameUi ? self.ingameUi.getBoundingClientRect() : {};
+                    self.setStatus('DONE: target=' + pos.left + ',' + pos.top + ' actual=' + Math.round(r.left) + 'px,' + Math.round(r.top) + 'px');
                 }
             }, 100);
-        } catch (e) {}
+        } catch (e) {
+            self.setStatus('RESTORE ERROR: ' + e.message);
+        }
     }
 
     // ---- VR Mode Detection ----
