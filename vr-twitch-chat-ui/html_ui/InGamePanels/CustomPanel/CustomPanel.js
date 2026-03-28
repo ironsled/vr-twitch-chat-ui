@@ -454,6 +454,15 @@ class IngamePanelCustomPanel extends TemplateElement {
         }, 2000);
     }
 
+    applyPosition(pos) {
+        var panel = this.ingameUi;
+        if (!panel) return;
+        if (pos.left) panel.style.setProperty('left', pos.left, 'important');
+        if (pos.top) panel.style.setProperty('top', pos.top, 'important');
+        if (pos.width) panel.style.setProperty('width', pos.width, 'important');
+        if (pos.height) panel.style.setProperty('height', pos.height, 'important');
+    }
+
     restorePanelPosition() {
         var posStr = this.getStored('PinnedPos') || this._lastPosBackup || '';
         if (!posStr) return;
@@ -461,22 +470,15 @@ class IngamePanelCustomPanel extends TemplateElement {
         var self = this;
         try {
             var pos = JSON.parse(posStr);
-            // Delay restore — MSFS resets panel position after panelActive fires,
-            // so we need to wait for it to finish before applying our saved position.
-            // Apply multiple times over 1 second to fight MSFS repositioning.
+            // Apply immediately
+            self.applyPosition(pos);
+            // Then keep applying for 3 seconds to override MSFS repositioning
             var applyCount = 0;
             var restoreInterval = setInterval(function () {
                 applyCount++;
-                var panel = self.ingameUi;
-                if (panel) {
-                    if (pos.left) panel.style.left = pos.left;
-                    if (pos.top) panel.style.top = pos.top;
-                    if (pos.width) panel.style.width = pos.width;
-                    if (pos.height) panel.style.height = pos.height;
-                }
-                if (applyCount >= 10) {
+                self.applyPosition(pos);
+                if (applyCount >= 30) {
                     clearInterval(restoreInterval);
-                    // Update lastSavedRect so auto-save doesn't immediately re-save
                     self.lastSavedRect = self.getRectString();
                 }
             }, 100);
@@ -556,10 +558,10 @@ class IngamePanelCustomPanel extends TemplateElement {
     // ---- Persistent Storage Helpers ----
 
     setStored(key, value) {
+        // Save to ALL available storage — don't return early
         try {
             if (typeof SetStoredData === 'function') {
                 SetStoredData(this.storagePrefix + key, value);
-                return;
             }
         } catch (e) {}
         try {
