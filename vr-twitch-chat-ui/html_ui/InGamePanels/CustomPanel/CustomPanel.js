@@ -221,10 +221,12 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.ingameUi) {
             this.ingameUi.addEventListener("panelActive", function () {
                 self.panelActive = true;
+                self.restorePanelPosition();
                 self.ensureConnected();
             });
             this.ingameUi.addEventListener("panelInactive", function () {
                 self.panelActive = false;
+                self.savePanelPosition();
             });
         }
 
