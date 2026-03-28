@@ -90,9 +90,14 @@ Font sizes and colors can also be adjusted live via the settings panel and will 
 - Channel Name, Chat Text, UI Controls, Emote Size — each with +/- buttons
 
 ### Colors
+- **Channel Name** — cycle through 16 color presets with < > buttons
 - **Chat Text** — cycle through 16 color presets with < > buttons
 - **Emote Labels** — cycle through 16 color presets with < > buttons
 - **Twitch Name Colors** — ON/OFF toggle for per-user Twitch colors
+
+## Panel Position
+
+MSFS does not support position persistence for third-party ingame panels. Use [MSFS Pop Out Panel Manager 2024](https://flightsim.to/addon/85158/msfs-pop-out-panel-manager-2024) to save and restore panel positions across sessions.
 
 ## Package Structure
 
