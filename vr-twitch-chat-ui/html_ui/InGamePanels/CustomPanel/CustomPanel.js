@@ -39,6 +39,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Settings panel state
         this.settingsOpen = false;
 
+        // Position pin state
+        this.positionPinned = false;
+
         // Transparent background state
         this.transparentBg = false;
 
@@ -101,6 +104,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.uiFontValue = document.getElementById("UIFontValue");
         this.emoteSizeValue = document.getElementById("EmoteSizeValue");
         this.vrModeLabel = document.getElementById("VRModeLabel");
+        this.pinPosBtn = document.getElementById("PinPosBtn");
         this.transBgBtn = document.getElementById("TransBgBtn");
         this.chatColorPreview = document.getElementById("ChatColorPreview");
         this.emoteColorPreview = document.getElementById("EmoteColorPreview");
@@ -140,6 +144,13 @@ class IngamePanelCustomPanel extends TemplateElement {
             });
         }
 
+        // Pin position button
+        if (this.pinPosBtn) {
+            this.pinPosBtn.addEventListener("click", function () {
+                self.togglePinPosition();
+            });
+        }
+
         // Transparent background toggle
         if (this.transBgBtn) {
             this.transBgBtn.addEventListener("click", function () {
@@ -152,6 +163,9 @@ class IngamePanelCustomPanel extends TemplateElement {
 
         // Restore font color settings
         this.restoreColorSettings();
+
+        // Restore pinned position
+        this.restorePinnedPosition();
 
         // Settings toggle
         if (this.settingsBtn) {
@@ -202,10 +216,12 @@ class IngamePanelCustomPanel extends TemplateElement {
         if (this.ingameUi) {
             this.ingameUi.addEventListener("panelActive", function () {
                 self.panelActive = true;
+                self.restorePinnedPosition();
                 self.ensureConnected();
             });
             this.ingameUi.addEventListener("panelInactive", function () {
                 self.panelActive = false;
+                if (self.positionPinned) self.savePinnedPosition();
             });
         }
 
@@ -361,6 +377,79 @@ class IngamePanelCustomPanel extends TemplateElement {
             } else {
                 chatNames[i].style.color = '#9146ff';
             }
+        }
+    }
+
+    // ---- Pin Position ----
+
+    togglePinPosition() {
+        if (this.positionPinned) {
+            this.setStored('PinnedPos', '');
+            this.positionPinned = false;
+            this.updatePinButton();
+            this.setStatus('Position unpinned');
+        } else {
+            this.savePinnedPosition();
+            this.positionPinned = true;
+            this.updatePinButton();
+            this.setStatus('Position saved');
+        }
+        var self = this;
+        setTimeout(function () {
+            if (self.chatStatus) self.chatStatus.style.display = 'none';
+        }, 2000);
+    }
+
+    savePinnedPosition() {
+        var panel = this.ingameUi;
+        if (!panel) return;
+
+        var style = window.getComputedStyle(panel);
+        var pos = {
+            left: panel.style.left || style.left,
+            top: panel.style.top || style.top,
+            width: panel.style.width || style.width,
+            height: panel.style.height || style.height
+        };
+        this.setStored('PinnedPos', JSON.stringify(pos));
+    }
+
+    restorePinnedPosition() {
+        var posStr = this.getStored('PinnedPos');
+        if (!posStr) {
+            this.positionPinned = false;
+            this.updatePinButton();
+            return;
+        }
+
+        this.positionPinned = true;
+        this.updatePinButton();
+
+        var self = this;
+        try {
+            var pos = JSON.parse(posStr);
+            var attempts = 0;
+            var restoreInterval = setInterval(function () {
+                attempts++;
+                var panel = self.ingameUi;
+                if (panel && panel.getBoundingClientRect().width > 0) {
+                    if (pos.left) panel.style.left = pos.left;
+                    if (pos.top) panel.style.top = pos.top;
+                    if (pos.width) panel.style.width = pos.width;
+                    if (pos.height) panel.style.height = pos.height;
+                    clearInterval(restoreInterval);
+                }
+                if (attempts > 30) {
+                    clearInterval(restoreInterval);
+                }
+            }, 100);
+        } catch (e) {}
+    }
+
+    updatePinButton() {
+        if (this.pinPosBtn) {
+            this.pinPosBtn.classList.toggle('pinned', this.positionPinned);
+            this.pinPosBtn.title = this.positionPinned ? 'Position saved — click to unpin' : 'Save panel position';
         }
     }
 
