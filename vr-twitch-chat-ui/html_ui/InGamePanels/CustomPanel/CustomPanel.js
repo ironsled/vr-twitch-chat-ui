@@ -51,10 +51,13 @@ class IngamePanelCustomPanel extends TemplateElement {
         ];
         this.defaultChatColor = '#efeff1';
         this.defaultEmoteLabelColor = '#bf94ff';
+        this.defaultChannelColor = '#9146ff';
         this.chatColorIndex = 0;
         this.emoteColorIndex = 12; // #bf94ff
+        this.channelColorIndex = 11; // #9146ff
         this.chatColor = this.defaultChatColor;
         this.emoteLabelColor = this.defaultEmoteLabelColor;
+        this.channelColor = this.defaultChannelColor;
         this.useTwitchNameColors = true;
 
         // Storage prefix for persistent settings
@@ -101,6 +104,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.transBgBtn = document.getElementById("TransBgBtn");
         this.chatColorPreview = document.getElementById("ChatColorPreview");
         this.emoteColorPreview = document.getElementById("EmoteColorPreview");
+        this.channelColorPreview = document.getElementById("ChannelColorPreview");
         this.twitchColorToggle = document.getElementById("TwitchColorToggle");
 
         // Detect initial VR state, migrate old settings, restore matching font profile
@@ -269,6 +273,9 @@ class IngamePanelCustomPanel extends TemplateElement {
         } else if (target === 'emote') {
             this.emoteColorIndex = (this.emoteColorIndex + dir + this.colorPresets.length) % this.colorPresets.length;
             this.emoteLabelColor = this.colorPresets[this.emoteColorIndex];
+        } else if (target === 'channel') {
+            this.channelColorIndex = (this.channelColorIndex + dir + this.colorPresets.length) % this.colorPresets.length;
+            this.channelColor = this.colorPresets[this.channelColorIndex];
         }
         this.updateColorPreviews();
         this.applyColorSettings();
@@ -278,6 +285,7 @@ class IngamePanelCustomPanel extends TemplateElement {
     updateColorPreviews() {
         if (this.chatColorPreview) this.chatColorPreview.style.backgroundColor = this.chatColor;
         if (this.emoteColorPreview) this.emoteColorPreview.style.backgroundColor = this.emoteLabelColor;
+        if (this.channelColorPreview) this.channelColorPreview.style.backgroundColor = this.channelColor;
     }
 
     findColorIndex(color) {
@@ -292,6 +300,7 @@ class IngamePanelCustomPanel extends TemplateElement {
         var settings = JSON.stringify({
             chatColorIndex: this.chatColorIndex,
             emoteColorIndex: this.emoteColorIndex,
+            channelColorIndex: this.channelColorIndex,
             useTwitchNameColors: this.useTwitchNameColors
         });
         this.setStored('ColorSettings', settings);
@@ -310,10 +319,13 @@ class IngamePanelCustomPanel extends TemplateElement {
                     this.emoteColorIndex = s.emoteColorIndex % this.colorPresets.length;
                     this.emoteLabelColor = this.colorPresets[this.emoteColorIndex];
                 }
+                if (typeof s.channelColorIndex === 'number') {
+                    this.channelColorIndex = s.channelColorIndex % this.colorPresets.length;
+                    this.channelColor = this.colorPresets[this.channelColorIndex];
+                }
                 if (typeof s.useTwitchNameColors === 'boolean') this.useTwitchNameColors = s.useTwitchNameColors;
             } catch (e) {}
         }
-        // Sync UI elements
         this.updateColorPreviews();
         if (this.twitchColorToggle) {
             this.twitchColorToggle.classList.toggle('on', this.useTwitchNameColors);
@@ -323,6 +335,11 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     applyColorSettings() {
+        // Apply channel name color
+        if (this.chatChannelName) {
+            this.chatChannelName.style.color = this.channelColor;
+        }
+
         // Apply chat text color to all existing messages
         var chatTexts = document.querySelectorAll('.chat-text');
         for (var i = 0; i < chatTexts.length; i++) {
@@ -634,6 +651,11 @@ class IngamePanelCustomPanel extends TemplateElement {
                     self.defaultEmoteLabelColor = config.emote_label_color;
                     self.emoteColorIndex = self.findColorIndex(config.emote_label_color);
                     self.emoteLabelColor = self.colorPresets[self.emoteColorIndex];
+                }
+                if (config.channel_color && typeof config.channel_color === 'string') {
+                    self.defaultChannelColor = config.channel_color;
+                    self.channelColorIndex = self.findColorIndex(config.channel_color);
+                    self.channelColor = self.colorPresets[self.channelColorIndex];
                 }
                 if (typeof config.use_twitch_colors === 'boolean') {
                     var savedColors = self.getStored('ColorSettings');
