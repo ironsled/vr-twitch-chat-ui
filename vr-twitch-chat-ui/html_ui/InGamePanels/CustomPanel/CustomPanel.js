@@ -372,19 +372,33 @@ class IngamePanelCustomPanel extends TemplateElement {
         }
     }
 
-    // ---- Panel Position (auto-save) ----
+    // ---- Panel Position ----
     //
-    // Uses getBoundingClientRect for consistent position tracking.
-    // Auto-saves every 2 seconds when position changes.
-    // P button force-saves and flashes confirmation.
-    // RESET button clears saved position.
+    // Finds the actual positioned element MSFS uses (walks up from ingame-ui),
+    // uses MutationObserver to catch and override MSFS repositioning,
+    // saves to both storage backends + instance variable.
+
+    getPanelElement() {
+        // MSFS may position the ingame-ui itself, or a parent wrapper.
+        // Walk up to find the element with explicit left/top or position:absolute/fixed.
+        var el = this.ingameUi;
+        if (!el) return null;
+        // Check parent elements — MSFS often wraps ingame-ui in a positioned container
+        var check = el;
+        for (var i = 0; i < 5 && check; i++) {
+            var cs = window.getComputedStyle(check);
+            if (cs.position === 'absolute' || cs.position === 'fixed') {
+                return check;
+            }
+            check = check.parentElement;
+        }
+        return el; // fallback to ingame-ui itself
+    }
 
     togglePinPosition() {
-        // Manual force-save — snapshot current position now
         this.savePanelPosition();
         this.setStatus('Position saved');
         var self = this;
-        // Flash P button green briefly
         if (this.pinPosBtn) this.pinPosBtn.classList.add('pinned');
         setTimeout(function () {
             if (self.pinPosBtn) self.pinPosBtn.classList.remove('pinned');
@@ -394,16 +408,18 @@ class IngamePanelCustomPanel extends TemplateElement {
 
     resetPanelPosition() {
         this.setStored('PinnedPos', '');
+        this._lastPosBackup = '';
         this.lastSavedRect = '';
+        this._restorePos = null;
 
-        var panel = this.ingameUi;
+        var panel = this.getPanelElement();
         if (panel) {
             panel.style.left = '';
             panel.style.top = '';
             panel.style.width = '';
             panel.style.height = '';
         }
-        this.setStatus('Position reset to default');
+        this.setStatus('Position reset');
         var self = this;
         setTimeout(function () {
             if (self.chatStatus) self.chatStatus.style.display = 'none';
@@ -411,17 +427,16 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     getRectString() {
-        var panel = this.ingameUi;
+        var panel = this.getPanelElement();
         if (!panel) return '';
         var r = panel.getBoundingClientRect();
         return Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + ',' + Math.round(r.height);
     }
 
     savePanelPosition() {
-        var panel = this.ingameUi;
+        var panel = this.getPanelElement();
         if (!panel) return;
         var r = panel.getBoundingClientRect();
-        // Skip saving if panel has zero size (hidden/collapsed)
         if (r.width < 10 || r.height < 10) return;
         var pos = {
             left: Math.round(r.left) + 'px',
@@ -431,21 +446,19 @@ class IngamePanelCustomPanel extends TemplateElement {
         };
         var posStr = JSON.stringify(pos);
         this.setStored('PinnedPos', posStr);
-        this.lastSavedRect = this.getRectString();
-        // Also store in instance variable as backup in case storage is session-scoped
         this._lastPosBackup = posStr;
+        this.lastSavedRect = this.getRectString();
     }
 
     startPositionAutoSave() {
         var self = this;
-        // Wait for panel to settle before capturing initial rect
         setTimeout(function () {
             self.lastSavedRect = self.getRectString();
-        }, 2000);
+        }, 3000);
 
-        // Check every 2 seconds if position/size changed
         setInterval(function () {
             if (!self.panelActive) return;
+            if (self._isRestoring) return;
             var currentRect = self.getRectString();
             if (!currentRect) return;
             if (currentRect !== self.lastSavedRect) {
@@ -455,12 +468,12 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     applyPosition(pos) {
-        var panel = this.ingameUi;
+        var panel = this.getPanelElement();
         if (!panel) return;
-        if (pos.left) panel.style.setProperty('left', pos.left, 'important');
-        if (pos.top) panel.style.setProperty('top', pos.top, 'important');
-        if (pos.width) panel.style.setProperty('width', pos.width, 'important');
-        if (pos.height) panel.style.setProperty('height', pos.height, 'important');
+        panel.style.setProperty('left', pos.left, 'important');
+        panel.style.setProperty('top', pos.top, 'important');
+        panel.style.setProperty('width', pos.width, 'important');
+        panel.style.setProperty('height', pos.height, 'important');
     }
 
     restorePanelPosition() {
@@ -470,15 +483,35 @@ class IngamePanelCustomPanel extends TemplateElement {
         var self = this;
         try {
             var pos = JSON.parse(posStr);
+            self._restorePos = pos;
+            self._isRestoring = true;
+
             // Apply immediately
             self.applyPosition(pos);
-            // Then keep applying for 3 seconds to override MSFS repositioning
+
+            // Use MutationObserver to catch MSFS overriding our position
+            var panel = self.getPanelElement();
+            if (panel && typeof MutationObserver !== 'undefined') {
+                var observer = new MutationObserver(function () {
+                    self.applyPosition(pos);
+                });
+                observer.observe(panel, { attributes: true, attributeFilter: ['style'] });
+                // Stop observing after 5 seconds so user can drag freely
+                setTimeout(function () {
+                    observer.disconnect();
+                    self._isRestoring = false;
+                    self.lastSavedRect = self.getRectString();
+                }, 5000);
+            }
+
+            // Also hammer it on intervals as fallback
             var applyCount = 0;
             var restoreInterval = setInterval(function () {
                 applyCount++;
                 self.applyPosition(pos);
-                if (applyCount >= 30) {
+                if (applyCount >= 50) {
                     clearInterval(restoreInterval);
+                    self._isRestoring = false;
                     self.lastSavedRect = self.getRectString();
                 }
             }, 100);
