@@ -39,8 +39,8 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Settings panel state
         this.settingsOpen = false;
 
-        // Position pin state
-        this.positionPinned = false;
+        // Position auto-save state
+        this.lastSavedRect = '';
 
         // Transparent background state
         this.transparentBg = false;
@@ -372,27 +372,27 @@ class IngamePanelCustomPanel extends TemplateElement {
 
     // ---- Panel Position (auto-save) ----
     //
-    // Automatically saves position/size every 2 seconds when the panel has moved.
-    // Restores on load. P button manually snapshots, reset button clears to defaults.
+    // Uses getBoundingClientRect for consistent position tracking.
+    // Auto-saves every 2 seconds when position changes.
+    // P button force-saves and flashes confirmation.
+    // RESET button clears saved position.
 
     togglePinPosition() {
-        // Manual snapshot — force-save current position now
+        // Manual force-save — snapshot current position now
         this.savePanelPosition();
-        this.positionPinned = true;
-        this.updatePinButton();
         this.setStatus('Position saved');
         var self = this;
+        // Flash P button green briefly
+        if (this.pinPosBtn) this.pinPosBtn.classList.add('pinned');
         setTimeout(function () {
+            if (self.pinPosBtn) self.pinPosBtn.classList.remove('pinned');
             if (self.chatStatus) self.chatStatus.style.display = 'none';
         }, 2000);
     }
 
     resetPanelPosition() {
-        // Clear saved position and reset to MSFS defaults
         this.setStored('PinnedPos', '');
-        this.positionPinned = false;
-        this.updatePinButton();
-        this.lastSavedPos = '';
+        this.lastSavedRect = '';
 
         var panel = this.ingameUi;
         if (panel) {
@@ -408,55 +408,48 @@ class IngamePanelCustomPanel extends TemplateElement {
         }, 2000);
     }
 
-    getCurrentPosition() {
+    getRectString() {
         var panel = this.ingameUi;
-        if (!panel) return null;
-
-        var style = window.getComputedStyle(panel);
-        return {
-            left: panel.style.left || style.left,
-            top: panel.style.top || style.top,
-            width: panel.style.width || style.width,
-            height: panel.style.height || style.height
-        };
+        if (!panel) return '';
+        var r = panel.getBoundingClientRect();
+        return Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + ',' + Math.round(r.height);
     }
 
     savePanelPosition() {
-        var pos = this.getCurrentPosition();
-        if (!pos) return;
+        var panel = this.ingameUi;
+        if (!panel) return;
+        var r = panel.getBoundingClientRect();
+        var pos = {
+            left: Math.round(r.left) + 'px',
+            top: Math.round(r.top) + 'px',
+            width: Math.round(r.width) + 'px',
+            height: Math.round(r.height) + 'px'
+        };
         var posStr = JSON.stringify(pos);
-        this.lastSavedPos = posStr;
         this.setStored('PinnedPos', posStr);
+        this.lastSavedRect = this.getRectString();
     }
 
     startPositionAutoSave() {
         var self = this;
-        this.lastSavedPos = this.getStored('PinnedPos') || '';
+        // Wait for panel to settle before capturing initial rect
+        setTimeout(function () {
+            self.lastSavedRect = self.getRectString();
+        }, 2000);
 
-        // Check every 2 seconds if position has changed, auto-save if so
+        // Check every 2 seconds if position/size changed
         setInterval(function () {
-            var pos = self.getCurrentPosition();
-            if (!pos) return;
-            var posStr = JSON.stringify(pos);
-            if (posStr !== self.lastSavedPos) {
-                self.lastSavedPos = posStr;
-                self.setStored('PinnedPos', posStr);
-                self.positionPinned = true;
-                self.updatePinButton();
+            var currentRect = self.getRectString();
+            if (!currentRect) return;
+            if (currentRect !== self.lastSavedRect) {
+                self.savePanelPosition();
             }
         }, 2000);
     }
 
     restorePanelPosition() {
         var posStr = this.getStored('PinnedPos');
-        if (!posStr) {
-            this.positionPinned = false;
-            this.updatePinButton();
-            return;
-        }
-
-        this.positionPinned = true;
-        this.updatePinButton();
+        if (!posStr) return;
 
         var self = this;
         try {
@@ -477,13 +470,6 @@ class IngamePanelCustomPanel extends TemplateElement {
                 }
             }, 100);
         } catch (e) {}
-    }
-
-    updatePinButton() {
-        if (this.pinPosBtn) {
-            this.pinPosBtn.classList.toggle('pinned', this.positionPinned);
-            this.pinPosBtn.title = this.positionPinned ? 'Position saved — click to re-save' : 'Save panel position';
-        }
     }
 
     // ---- VR Mode Detection ----
