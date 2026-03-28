@@ -421,6 +421,8 @@ class IngamePanelCustomPanel extends TemplateElement {
         var panel = this.ingameUi;
         if (!panel) return;
         var r = panel.getBoundingClientRect();
+        // Skip saving if panel has zero size (hidden/collapsed)
+        if (r.width < 10 || r.height < 10) return;
         var pos = {
             left: Math.round(r.left) + 'px',
             top: Math.round(r.top) + 'px',
@@ -430,6 +432,8 @@ class IngamePanelCustomPanel extends TemplateElement {
         var posStr = JSON.stringify(pos);
         this.setStored('PinnedPos', posStr);
         this.lastSavedRect = this.getRectString();
+        // Also store in instance variable as backup in case storage is session-scoped
+        this._lastPosBackup = posStr;
     }
 
     startPositionAutoSave() {
@@ -441,6 +445,7 @@ class IngamePanelCustomPanel extends TemplateElement {
 
         // Check every 2 seconds if position/size changed
         setInterval(function () {
+            if (!self.panelActive) return;
             var currentRect = self.getRectString();
             if (!currentRect) return;
             if (currentRect !== self.lastSavedRect) {
@@ -450,25 +455,29 @@ class IngamePanelCustomPanel extends TemplateElement {
     }
 
     restorePanelPosition() {
-        var posStr = this.getStored('PinnedPos');
+        var posStr = this.getStored('PinnedPos') || this._lastPosBackup || '';
         if (!posStr) return;
 
         var self = this;
         try {
             var pos = JSON.parse(posStr);
-            var attempts = 0;
+            // Delay restore — MSFS resets panel position after panelActive fires,
+            // so we need to wait for it to finish before applying our saved position.
+            // Apply multiple times over 1 second to fight MSFS repositioning.
+            var applyCount = 0;
             var restoreInterval = setInterval(function () {
-                attempts++;
+                applyCount++;
                 var panel = self.ingameUi;
-                if (panel && panel.getBoundingClientRect().width > 0) {
+                if (panel) {
                     if (pos.left) panel.style.left = pos.left;
                     if (pos.top) panel.style.top = pos.top;
                     if (pos.width) panel.style.width = pos.width;
                     if (pos.height) panel.style.height = pos.height;
-                    clearInterval(restoreInterval);
                 }
-                if (attempts > 30) {
+                if (applyCount >= 10) {
                     clearInterval(restoreInterval);
+                    // Update lastSavedRect so auto-save doesn't immediately re-save
+                    self.lastSavedRect = self.getRectString();
                 }
             }, 100);
         } catch (e) {}
