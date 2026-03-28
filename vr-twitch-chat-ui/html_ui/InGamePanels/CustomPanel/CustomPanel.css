@@ -352,6 +352,21 @@ body.transparent-mode #SettingsPanel {
     margin-top: 2px;
 }
 
+.settings-hint {
+    font-size: 10px;
+    color: #555;
+    line-height: 1.4;
+}
+
+.settings-link {
+    color: #9146ff;
+    text-decoration: none;
+}
+.settings-link:hover {
+    color: #bf94ff;
+    text-decoration: underline;
+}
+
 /* Color preview swatch (between < > buttons) */
 .color-preview {
     display: inline-block;
