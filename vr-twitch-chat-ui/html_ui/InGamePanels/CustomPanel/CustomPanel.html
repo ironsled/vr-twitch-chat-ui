@@ -81,6 +81,37 @@
                             <button class="ctrl-btn settings-btn" data-target="emote" data-dir="1">+</button>
                         </div>
                     </div>
+                    <hr class="settings-divider" />
+                    <div class="settings-section-label">Colors</div>
+                    <div class="settings-row">
+                        <span class="settings-label">Chat Text</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn color-prev-btn" data-color-target="chat" data-dir="-1">&lt;</button>
+                            <span class="color-preview" id="ChatColorPreview"></span>
+                            <button class="ctrl-btn settings-btn color-next-btn" data-color-target="chat" data-dir="1">&gt;</button>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Emote Labels</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn settings-btn color-prev-btn" data-color-target="emote" data-dir="-1">&lt;</button>
+                            <span class="color-preview" id="EmoteColorPreview"></span>
+                            <button class="ctrl-btn settings-btn color-next-btn" data-color-target="emote" data-dir="1">&gt;</button>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Twitch Name Colors</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn toggle-btn on" id="TwitchColorToggle" title="Use Twitch username colors">ON</button>
+                        </div>
+                    </div>
+                    <hr class="settings-divider" />
+                    <div class="settings-row">
+                        <span class="settings-label">Panel Position</span>
+                        <div class="settings-controls">
+                            <button class="ctrl-btn reset-pos-btn" id="ResetPosBtn" title="Reset panel position to default">RESET</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="ChatMessages"></div>
                 <div id="ChatStatus">Connecting...</div>

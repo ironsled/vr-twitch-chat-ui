@@ -45,6 +45,21 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Transparent background state
         this.transparentBg = false;
 
+        // Font color presets and state
+        this.colorPresets = [
+            '#efeff1', '#ffffff', '#000000', '#ff4500', '#ff6347',
+            '#ff9900', '#ffd700', '#00ff88', '#00ff7f', '#1e90ff',
+            '#4fc3f7', '#9146ff', '#bf94ff', '#ff69b4', '#e55',
+            '#aaaaaa'
+        ];
+        this.defaultChatColor = '#efeff1';
+        this.defaultEmoteLabelColor = '#bf94ff';
+        this.chatColorIndex = 0;
+        this.emoteColorIndex = 12; // #bf94ff
+        this.chatColor = this.defaultChatColor;
+        this.emoteLabelColor = this.defaultEmoteLabelColor;
+        this.useTwitchNameColors = true;
+
         // Storage prefix for persistent settings
         this.storagePrefix = 'SKYDECK_TWITCH_';
 
@@ -88,6 +103,10 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.vrModeLabel = document.getElementById("VRModeLabel");
         this.pinPosBtn = document.getElementById("PinPosBtn");
         this.transBgBtn = document.getElementById("TransBgBtn");
+        this.chatColorPreview = document.getElementById("ChatColorPreview");
+        this.emoteColorPreview = document.getElementById("EmoteColorPreview");
+        this.twitchColorToggle = document.getElementById("TwitchColorToggle");
+        this.resetPosBtn = document.getElementById("ResetPosBtn");
 
         // Detect initial VR state, migrate old settings, restore matching font profile
         this.detectVRMode();
@@ -129,6 +148,13 @@ class IngamePanelCustomPanel extends TemplateElement {
             });
         }
 
+        // Reset position button
+        if (this.resetPosBtn) {
+            this.resetPosBtn.addEventListener("click", function () {
+                self.resetPanelPosition();
+            });
+        }
+
         // Transparent background toggle
         if (this.transBgBtn) {
             this.transBgBtn.addEventListener("click", function () {
@@ -139,8 +165,12 @@ class IngamePanelCustomPanel extends TemplateElement {
         // Restore transparent background setting
         this.restoreTransparentBg();
 
-        // Restore pinned position (one-time on load)
-        this.restorePinnedPosition();
+        // Restore font color settings
+        this.restoreColorSettings();
+
+        // Restore saved panel position and start auto-save
+        this.restorePanelPosition();
+        this.startPositionAutoSave();
 
         // Settings toggle
         if (this.settingsBtn) {
@@ -156,6 +186,27 @@ class IngamePanelCustomPanel extends TemplateElement {
                 var target = this.getAttribute('data-target');
                 var dir = parseInt(this.getAttribute('data-dir'));
                 self.changeFontSize(target, dir * self.fontStep);
+            });
+        }
+
+        // Color cycling buttons (< > to cycle through presets)
+        var colorBtns = document.querySelectorAll('[data-color-target]');
+        for (var i = 0; i < colorBtns.length; i++) {
+            colorBtns[i].addEventListener("click", function () {
+                var target = this.getAttribute('data-color-target');
+                var dir = parseInt(this.getAttribute('data-dir'));
+                self.cycleColor(target, dir);
+            });
+        }
+
+        // Twitch name colors toggle
+        if (this.twitchColorToggle) {
+            this.twitchColorToggle.addEventListener("click", function () {
+                self.useTwitchNameColors = !self.useTwitchNameColors;
+                self.twitchColorToggle.classList.toggle('on', self.useTwitchNameColors);
+                self.twitchColorToggle.textContent = self.useTwitchNameColors ? 'ON' : 'OFF';
+                self.applyColorSettings();
+                self.saveColorSettings();
             });
         }
 
@@ -232,47 +283,171 @@ class IngamePanelCustomPanel extends TemplateElement {
         this.applyTransparentBg();
     }
 
-    // ---- Pin Position ----
+    // ---- Font Color Settings ----
+
+    cycleColor(target, dir) {
+        if (target === 'chat') {
+            this.chatColorIndex = (this.chatColorIndex + dir + this.colorPresets.length) % this.colorPresets.length;
+            this.chatColor = this.colorPresets[this.chatColorIndex];
+        } else if (target === 'emote') {
+            this.emoteColorIndex = (this.emoteColorIndex + dir + this.colorPresets.length) % this.colorPresets.length;
+            this.emoteLabelColor = this.colorPresets[this.emoteColorIndex];
+        }
+        this.updateColorPreviews();
+        this.applyColorSettings();
+        this.saveColorSettings();
+    }
+
+    updateColorPreviews() {
+        if (this.chatColorPreview) this.chatColorPreview.style.backgroundColor = this.chatColor;
+        if (this.emoteColorPreview) this.emoteColorPreview.style.backgroundColor = this.emoteLabelColor;
+    }
+
+    findColorIndex(color) {
+        var lower = color.toLowerCase();
+        for (var i = 0; i < this.colorPresets.length; i++) {
+            if (this.colorPresets[i].toLowerCase() === lower) return i;
+        }
+        return 0;
+    }
+
+    saveColorSettings() {
+        var settings = JSON.stringify({
+            chatColorIndex: this.chatColorIndex,
+            emoteColorIndex: this.emoteColorIndex,
+            useTwitchNameColors: this.useTwitchNameColors
+        });
+        this.setStored('ColorSettings', settings);
+    }
+
+    restoreColorSettings() {
+        var settingsStr = this.getStored('ColorSettings');
+        if (settingsStr) {
+            try {
+                var s = JSON.parse(settingsStr);
+                if (typeof s.chatColorIndex === 'number') {
+                    this.chatColorIndex = s.chatColorIndex % this.colorPresets.length;
+                    this.chatColor = this.colorPresets[this.chatColorIndex];
+                }
+                if (typeof s.emoteColorIndex === 'number') {
+                    this.emoteColorIndex = s.emoteColorIndex % this.colorPresets.length;
+                    this.emoteLabelColor = this.colorPresets[this.emoteColorIndex];
+                }
+                if (typeof s.useTwitchNameColors === 'boolean') this.useTwitchNameColors = s.useTwitchNameColors;
+            } catch (e) {}
+        }
+        // Sync UI elements
+        this.updateColorPreviews();
+        if (this.twitchColorToggle) {
+            this.twitchColorToggle.classList.toggle('on', this.useTwitchNameColors);
+            this.twitchColorToggle.textContent = this.useTwitchNameColors ? 'ON' : 'OFF';
+        }
+        this.applyColorSettings();
+    }
+
+    applyColorSettings() {
+        // Apply chat text color to all existing messages
+        var chatTexts = document.querySelectorAll('.chat-text');
+        for (var i = 0; i < chatTexts.length; i++) {
+            chatTexts[i].style.color = this.chatColor;
+        }
+
+        // Apply emote label color to all existing emote labels
+        var emoteLabels = document.querySelectorAll('.emote-label');
+        for (var i = 0; i < emoteLabels.length; i++) {
+            emoteLabels[i].style.color = this.emoteLabelColor;
+        }
+
+        // Apply Twitch name color toggle
+        var chatNames = document.querySelectorAll('.chat-name');
+        for (var i = 0; i < chatNames.length; i++) {
+            if (this.useTwitchNameColors) {
+                var origColor = chatNames[i].getAttribute('data-twitch-color');
+                if (origColor) chatNames[i].style.color = origColor;
+            } else {
+                chatNames[i].style.color = '#9146ff';
+            }
+        }
+    }
+
+    // ---- Panel Position (auto-save) ----
     //
-    // Manual save only — no auto-polling. Click P to snapshot current position.
-    // Click again to clear. Restores once on panel load, then hands off to MSFS.
+    // Automatically saves position/size every 2 seconds when the panel has moved.
+    // Restores on load. P button manually snapshots, reset button clears to defaults.
 
     togglePinPosition() {
-        if (this.positionPinned) {
-            // Unpin — clear saved position
-            this.setStored('PinnedPos', '');
-            this.positionPinned = false;
-            this.updatePinButton();
-            this.setStatus('Position unpinned');
-        } else {
-            // Pin — save current position
-            this.savePinnedPosition();
-            this.positionPinned = true;
-            this.updatePinButton();
-            this.setStatus('Position saved');
-        }
+        // Manual snapshot — force-save current position now
+        this.savePanelPosition();
+        this.positionPinned = true;
+        this.updatePinButton();
+        this.setStatus('Position saved');
         var self = this;
         setTimeout(function () {
             if (self.chatStatus) self.chatStatus.style.display = 'none';
         }, 2000);
     }
 
-    savePinnedPosition() {
-        var panel = this.ingameUi;
-        if (!panel) return;
+    resetPanelPosition() {
+        // Clear saved position and reset to MSFS defaults
+        this.setStored('PinnedPos', '');
+        this.positionPinned = false;
+        this.updatePinButton();
+        this.lastSavedPos = '';
 
-        var rect = panel.getBoundingClientRect();
+        var panel = this.ingameUi;
+        if (panel) {
+            panel.style.left = '';
+            panel.style.top = '';
+            panel.style.width = '';
+            panel.style.height = '';
+        }
+        this.setStatus('Position reset to default');
+        var self = this;
+        setTimeout(function () {
+            if (self.chatStatus) self.chatStatus.style.display = 'none';
+        }, 2000);
+    }
+
+    getCurrentPosition() {
+        var panel = this.ingameUi;
+        if (!panel) return null;
+
         var style = window.getComputedStyle(panel);
-        var pos = {
+        return {
             left: panel.style.left || style.left,
             top: panel.style.top || style.top,
             width: panel.style.width || style.width,
             height: panel.style.height || style.height
         };
-        this.setStored('PinnedPos', JSON.stringify(pos));
     }
 
-    restorePinnedPosition() {
+    savePanelPosition() {
+        var pos = this.getCurrentPosition();
+        if (!pos) return;
+        var posStr = JSON.stringify(pos);
+        this.lastSavedPos = posStr;
+        this.setStored('PinnedPos', posStr);
+    }
+
+    startPositionAutoSave() {
+        var self = this;
+        this.lastSavedPos = this.getStored('PinnedPos') || '';
+
+        // Check every 2 seconds if position has changed, auto-save if so
+        setInterval(function () {
+            var pos = self.getCurrentPosition();
+            if (!pos) return;
+            var posStr = JSON.stringify(pos);
+            if (posStr !== self.lastSavedPos) {
+                self.lastSavedPos = posStr;
+                self.setStored('PinnedPos', posStr);
+                self.positionPinned = true;
+                self.updatePinButton();
+            }
+        }, 2000);
+    }
+
+    restorePanelPosition() {
         var posStr = this.getStored('PinnedPos');
         if (!posStr) {
             this.positionPinned = false;
@@ -286,7 +461,6 @@ class IngamePanelCustomPanel extends TemplateElement {
         var self = this;
         try {
             var pos = JSON.parse(posStr);
-            // Wait for panel to render, apply once, then stop
             var attempts = 0;
             var restoreInterval = setInterval(function () {
                 attempts++;
@@ -308,7 +482,7 @@ class IngamePanelCustomPanel extends TemplateElement {
     updatePinButton() {
         if (this.pinPosBtn) {
             this.pinPosBtn.classList.toggle('pinned', this.positionPinned);
-            this.pinPosBtn.title = this.positionPinned ? 'Position saved — click to unpin' : 'Save panel position';
+            this.pinPosBtn.title = this.positionPinned ? 'Position saved — click to re-save' : 'Save panel position';
         }
     }
 
@@ -588,6 +762,27 @@ class IngamePanelCustomPanel extends TemplateElement {
                 self.vrFonts.channel = config.vr_channel_font_size || Math.round(self.desktopFonts.channel * self.vrScale);
                 self.vrFonts.ui = config.vr_ui_font_size || Math.round(self.desktopFonts.ui * self.vrScale);
                 self.vrFonts.emote = config.vr_emote_size || Math.round(self.desktopFonts.emote * self.vrScale);
+
+                // Color defaults from config
+                if (config.chat_color && typeof config.chat_color === 'string') {
+                    self.defaultChatColor = config.chat_color;
+                    self.chatColorIndex = self.findColorIndex(config.chat_color);
+                    self.chatColor = self.colorPresets[self.chatColorIndex];
+                }
+                if (config.emote_label_color && typeof config.emote_label_color === 'string') {
+                    self.defaultEmoteLabelColor = config.emote_label_color;
+                    self.emoteColorIndex = self.findColorIndex(config.emote_label_color);
+                    self.emoteLabelColor = self.colorPresets[self.emoteColorIndex];
+                }
+                if (typeof config.use_twitch_colors === 'boolean') {
+                    var savedColors = self.getStored('ColorSettings');
+                    if (!savedColors) {
+                        self.useTwitchNameColors = config.use_twitch_colors;
+                    }
+                }
+
+                // Re-restore color settings (saved settings override config defaults)
+                self.restoreColorSettings();
 
                 // Re-apply font settings for current mode (config may have changed defaults)
                 self.loadFontSettingsForMode(self.isVR);
@@ -950,6 +1145,7 @@ class IngamePanelCustomPanel extends TemplateElement {
                 var label = document.createElement('span');
                 label.className = 'emote-label';
                 label.setAttribute('data-emote-id', e.id);
+                label.style.color = this.emoteLabelColor;
                 label.textContent = emoteName;
                 textEl.appendChild(label);
             }
@@ -973,11 +1169,13 @@ class IngamePanelCustomPanel extends TemplateElement {
 
         var nameEl = document.createElement('span');
         nameEl.className = 'chat-name';
-        nameEl.style.color = color;
+        nameEl.setAttribute('data-twitch-color', color);
+        nameEl.style.color = this.useTwitchNameColors ? color : '#9146ff';
         nameEl.textContent = name;
 
         var textEl = document.createElement('span');
         textEl.className = 'chat-text';
+        textEl.style.color = this.chatColor;
 
         // Build message with emotes (DOM-based, no innerHTML)
         this.buildMessageContent(textEl, text, emotesTag);

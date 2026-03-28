@@ -10,12 +10,16 @@ A lightweight in-game panel for Microsoft Flight Simulator 2024 that displays yo
 - Live Twitch chat overlay inside MSFS 2024
 - **Auto VR/Desktop font switching** — detects VR by panel resolution and scales all fonts automatically (2.2x default). No manual resizing when switching.
 - **Separate font profiles** — VR and desktop sizes saved independently. Tweak in VR, only VR is affected. Tweak on desktop, only desktop is affected.
+- **Font color customization** — cycle through 16 preset colors for chat text and emote labels. Toggle Twitch username colors on/off. Settings persist across sessions.
 - **Transparent background (T)** — toggle panel background transparency so the sim scenery shows through while chat remains readable. Setting persists across sessions.
-- **Pin position (P)** — save panel position with one click. Restores on next load, then hands off to MSFS for normal dragging. Click again to unpin.
+- **Auto-save panel position** — position and size are automatically saved every 2 seconds. Panel restores exactly where you left it after reload.
+- **Pin position (P)** — manually force-save current position at any time
+- **Reset UI position** — if the panel gets lost off-screen, use the RESET button in settings to restore default placement
 - **VR/DT mode indicator** — header shows current mode (blue = VR active)
 - **Twitch emote support** — emotes shown as styled labels with image loading when available
 - **Adjustable font sizes** — independent controls for chat text, channel name, UI elements, and emote size
-- **Settings panel (S)** — font size controls for all UI elements, all scale properly in VR
+- **Settings panel (S)** — font size controls, color presets, and panel position reset, all scale properly in VR
+- **Responsive layout** — header and controls wrap cleanly at any panel size
 - **Persistent settings** — font preferences saved per-mode across sessions via MSFS data storage
 - Compact header to maximize chat viewing area
 - Connects via Twitch IRC (no authentication required for read-only chat)
@@ -42,10 +46,9 @@ Edit `vr-twitch-chat-ui/html_ui/InGamePanels/CustomPanel/config.json`:
     "ui_font_size": 12,
     "emote_size": 22,
     "vr_scale": 2.2,
-    "vr_font_size": 50,
-    "vr_channel_font_size": 50,
-    "vr_ui_font_size": 50,
-    "vr_emote_size": 50
+    "chat_color": "#efeff1",
+    "emote_label_color": "#bf94ff",
+    "use_twitch_colors": true
 }
 ```
 
@@ -56,10 +59,13 @@ Edit `vr-twitch-chat-ui/html_ui/InGamePanels/CustomPanel/config.json`:
 | `ui_font_size` | Desktop UI controls size (px) |
 | `emote_size` | Desktop emote size (px) |
 | `vr_scale` | Multiplier applied to desktop sizes for VR defaults (default 2.2) |
+| `chat_color` | Default chat text color (hex) |
+| `emote_label_color` | Default emote label text color (hex) |
+| `use_twitch_colors` | Use per-user Twitch name colors (true/false) |
 
 Optional VR overrides: `vr_font_size`, `vr_channel_font_size`, `vr_ui_font_size`, `vr_emote_size` — set exact VR values instead of using the multiplier.
 
-Font sizes can also be adjusted live via the settings panel and will persist automatically per mode.
+Font sizes and colors can also be adjusted live via the settings panel and will persist automatically.
 
 ## Usage
 
@@ -67,10 +73,10 @@ Font sizes can also be adjusted live via the settings panel and will persist aut
 2. Enter your Twitch channel name (or pre-configure in `config.json`)
 3. Click **CONNECT**
 4. Use **A-** / **A+** to quickly adjust chat font size
-5. Press **S** to open the settings panel for fine-grained control over all font sizes
+5. Press **S** to open the settings panel for font sizes, colors, and panel position reset
 6. Press **T** to toggle transparent background — see the sim through the panel
-7. Press **P** to pin panel position — restores on next load. Press again to unpin.
-7. Click **X** to disconnect
+7. Press **P** to force-save panel position (auto-saves every 2 seconds)
+8. Click **X** to disconnect
 
 ## Header Controls
 
@@ -78,10 +84,23 @@ Font sizes can also be adjusted live via the settings panel and will persist aut
 |---------|----------|
 | **VR/DT** | Current mode indicator (auto-detected) |
 | **T** | Toggle transparent background (green = active) |
-| **P** | Pin/unpin panel position (green = saved) |
-| **S** | Toggle font size settings panel |
+| **P** | Force-save panel position (green = saved) |
+| **S** | Toggle settings panel (sizes, colors, position reset) |
 | **A-** / **A+** | Adjust chat font size |
 | **X** | Disconnect from chat |
+
+## Settings Panel
+
+### Sizes
+- Channel Name, Chat Text, UI Controls, Emote Size — each with +/- buttons
+
+### Colors
+- **Chat Text** — cycle through 16 color presets with < > buttons
+- **Emote Labels** — cycle through 16 color presets with < > buttons
+- **Twitch Name Colors** — ON/OFF toggle for per-user Twitch colors
+
+### Panel Position
+- **RESET** — clear saved position and restore MSFS default placement
 
 ## Package Structure
 

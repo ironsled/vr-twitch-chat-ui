@@ -4,5 +4,8 @@
     "channel_font_size": 16,
     "ui_font_size": 12,
     "emote_size": 22,
-    "vr_scale": 2.2
+    "vr_scale": 2.2,
+    "chat_color": "#efeff1",
+    "emote_label_color": "#bf94ff",
+    "use_twitch_colors": true
 }
